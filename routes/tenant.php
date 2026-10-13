@@ -7,6 +7,7 @@ use App\Http\Controllers\Tenant\AuthController;
 use App\Http\Controllers\Tenant\SettingsController;
 use App\Http\Middleware\InitializeTenancyByHeader;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Rent\CustomerController;
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
     ->prefix('api/t')
@@ -22,6 +23,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
 
             // Rent product
             Route::middleware('module:rent')->prefix('rent')->group(function () {
+                Route::get('customers', [CustomerController::class, 'index']);
                 Route::get('/vehicles', [VehicleController::class, 'index'])
                     ->middleware('can:rent.vehicles.view');
                 Route::post('/vehicles', [VehicleController::class, 'store'])
