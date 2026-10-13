@@ -17,4 +17,8 @@ class TenantModule extends Model
         return $this->status === 'active'
             && ($this->ends_at === null || $this->ends_at->isFuture());
     }
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class, 'tenant_id');
+    }
 }

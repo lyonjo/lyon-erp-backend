@@ -17,8 +17,7 @@ return [
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
     'central_domains' => [
-        '127.0.0.1',
-        'localhost',
+        'erp-api.lyon-jo.com'
     ],
 
     /**
@@ -51,7 +50,7 @@ return [
          * Tenant database names are created like this:
          * prefix + tenant_id + suffix.
          */
-        'prefix' => 'tenant',
+        'prefix' => 'lyonjo5_t_',
         'suffix' => '',
 
         /**
@@ -179,7 +178,7 @@ return [
      * enabled. But it may be useful to disable them if you use external
      * storage (e.g. S3 / Dropbox) or have a custom asset controller.
      */
-    'routes' => true,
+    'routes' => false,
 
     /**
      * Parameters used by the tenants:migrate command.

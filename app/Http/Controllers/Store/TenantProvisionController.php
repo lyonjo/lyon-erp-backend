@@ -12,6 +12,11 @@ class TenantProvisionController extends Controller
 {
     public function provision(Request $r)
     {
+        if ($oid = $r->input('external_order_id')) {
+            if ($existing = TenantModule::with('tenant')->where('external_order_id', $oid)->first()) {
+                return response()->json($this->payload($existing->tenant, $existing));
+            }
+        }
         $d = $r->validate([
             'external_order_id'      => 'required|string|max:100',
             'tenant_id'              => 'nullable|exists:tenants,id',
@@ -33,11 +38,6 @@ class TenantProvisionController extends Controller
             'ends_at'                => 'required_unless:plan,own|nullable|date|after:now',
         ]);
 
-        // Idempotency: the same order never provisions twice (safe for Store retries)
-        if ($existing = TenantModule::where('external_order_id', $d['external_order_id'])->first()) {
-            return response()->json($this->payload($existing->tenant, $existing));
-        }
-
         $tenant = isset($d['tenant_id'])
             ? Tenant::findOrFail($d['tenant_id'])
             : $this->createTenant($d);
@@ -57,24 +57,24 @@ class TenantProvisionController extends Controller
 
     private function createTenant(array $d): Tenant
     {
-        $c = $d['customer'];
+        try {
+            $c = $d['customer'];
+            $tenant = Tenant::create([
+                'id' => $d['subdomain'],
+                'company_name' => $c['company'],
+                'admin_name' => $c['name'],
+                'admin_email' => $c['email'],
+                'admin_phone' => $c['phone'] ?? null,
+                'admin_password_hash' => $c['password_hash'],
+            ]);
+            $tenant->domains()->create(['domain' => $d['subdomain'] . '.' . config('app.tenant_base_domain')]);
 
-        // admin_password_hash is not a real column, so it goes to the data JSON column.
-        // CreateTenantAdmin reads it and wipes it right after.
-        $tenant = Tenant::create([
-            'id'                  => $d['subdomain'],
-            'company_name'        => $c['company'],
-            'admin_name'          => $c['name'],
-            'admin_email'         => $c['email'],
-            'admin_phone'         => $c['phone'] ?? null,
-            'admin_password_hash' => $c['password_hash'],
-        ]);
-
-        $tenant->domains()->create([
-            'domain' => $d['subdomain'] . '.' . config('app.tenant_base_domain'),
-        ]);
-
-        return $tenant;
+            return $tenant;
+        } catch (\Throwable $e) {
+            \DB::table('tenants')->where('id', $d['subdomain'])->delete();   // domains and modules cascade
+            \DB::statement('DROP DATABASE IF EXISTS `' . config('tenancy.database.prefix') . $d['subdomain'] . '`');
+            throw $e;
+        }
     }
 
     public function show(Tenant $tenant)

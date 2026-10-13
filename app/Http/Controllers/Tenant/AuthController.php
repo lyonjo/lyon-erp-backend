@@ -47,8 +47,9 @@ class AuthController extends Controller
             ->values();
 
         return [
-            'user' => $user,
-            'modules' => $modules,
+            'user'        => $user->only(['id', 'name', 'email']),
+            'roles'       => $user->getRoleNames(),
+            'modules'     => $modules,
             'permissions' => $permissions,
         ];
     }
