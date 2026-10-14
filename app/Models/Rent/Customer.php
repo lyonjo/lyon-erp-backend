@@ -28,7 +28,14 @@ class Customer extends Model
         'client_side'       => ClientSide::class,
         'is_multi_contract' => 'boolean',
         'is_blacklist'      => 'boolean',
+        'date_of_birth'           => 'date:Y-m-d',
+        'passport_date_of_issue'  => 'date:Y-m-d',
+        'passport_date_of_expire' => 'date:Y-m-d',
+        'license_date_of_issue'   => 'date:Y-m-d',
+        'license_date_of_expire'  => 'date:Y-m-d',
     ];
+
+    public const DOCUMENT_TYPES = ['id_front', 'id_back', 'license_front', 'license_back', 'passport'];
 
     public function user(): BelongsTo
     {

@@ -24,10 +24,12 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
             // Rent product
             Route::middleware('module:rent')->prefix('rent')->group(function () {
                 Route::get('customers', [CustomerController::class, 'index']);
-                Route::get('/vehicles', [VehicleController::class, 'index'])
-                    ->middleware('can:rent.vehicles.view');
-                Route::post('/vehicles', [VehicleController::class, 'store'])
-                    ->middleware('can:rent.vehicles.manage');
+                Route::get('/customers/{customer}', [CustomerController::class, 'show']);
+                Route::post('/customers', [CustomerController::class, 'store']);
+                Route::put('/customers/{customer}', [CustomerController::class, 'update']);
+                Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
+                Route::get('/vehicles', [VehicleController::class, 'index']);
+                Route::post('/vehicles', [VehicleController::class, 'store']);
             });
         });
     });
