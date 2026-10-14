@@ -15,6 +15,8 @@ class CustomerCompanyController extends Controller
         $data = $request->validate([
             'search'   => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
+            'is_blacklist'      => ['nullable', 'boolean'],
+            'is_multi_contract' => ['nullable', 'boolean'],
         ]);
 
         $companies = CustomerCompany::query()
@@ -28,6 +30,8 @@ class CustomerCompanyController extends Controller
                         ->orWhere('email', 'like', $term);
                 });
             })
+            ->when(isset($data['is_blacklist']), fn($q) => $q->where('is_blacklist', $data['is_blacklist']))
+            ->when(isset($data['is_multi_contract']), fn($q) => $q->where('is_multi_contract', $data['is_multi_contract']))
             ->orderByDesc('id')
             ->paginate($data['per_page'] ?? 15);
 

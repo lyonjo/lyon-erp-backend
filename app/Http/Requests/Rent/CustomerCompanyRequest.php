@@ -22,6 +22,8 @@ class CustomerCompanyRequest extends FormRequest
             'country_code' => [$req, 'string', 'max:10'],
             'phone'        => [$req, 'string', 'max:30'],
             'address'      => [$req, 'string', 'max:255'],
+            'is_blacklist'      => ['sometimes', 'boolean'],
+            'is_multi_contract' => ['sometimes', 'boolean'],
             'user_id'      => ['nullable', 'exists:users,id'],
         ];
     }

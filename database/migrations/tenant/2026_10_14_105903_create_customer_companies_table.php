@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('country_code', 10);
             $table->string('phone', 30);
             $table->string('address');
+            $table->boolean('is_blacklist')->default(false);
+            $table->boolean('is_multi_contract')->default(false);
             $table->foreignId('user_id')
                 ->nullable()
                 ->constrained('users')

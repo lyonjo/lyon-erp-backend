@@ -17,6 +17,8 @@ class CustomerCompanyResource extends JsonResource
             'country_code' => $this->country_code,
             'phone'        => $this->phone,
             'address'      => $this->address,
+            'is_blacklist'      => $this->is_blacklist,
+            'is_multi_contract' => $this->is_multi_contract,
         ];
     }
 }
