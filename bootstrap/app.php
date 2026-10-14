@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(append: [App\Http\Middleware\NoCache::class]);
+        $middleware->append(\App\Http\Middleware\NoCache::class);
         $middleware->alias([
             'module' => EnsureModuleActive::class,
             'store.auth' => VerifyStoreSignature::class,
