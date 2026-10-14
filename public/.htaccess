@@ -1,4 +1,9 @@
+<IfModule LiteSpeed>
+    CacheDisable public /
+</IfModule>
 <IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule .* - [E=Cache-Control:no-cache]
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
