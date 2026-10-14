@@ -8,6 +8,8 @@ use App\Http\Controllers\Tenant\SettingsController;
 use App\Http\Middleware\InitializeTenancyByHeader;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Rent\CustomerController;
+use App\Http\Controllers\Rent\CustomerCompanyController;
+
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
     ->prefix('api/t')
@@ -30,6 +32,11 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
                 Route::get('/vehicles', [VehicleController::class, 'index']);
                 Route::post('/vehicles', [VehicleController::class, 'store']);
+                Route::get('/customer-companies', [CustomerCompanyController::class, 'index']);
+                Route::get('/customer-companies/{customerCompany}', [CustomerCompanyController::class, 'show']);
+                Route::post('/customer-companies', [CustomerCompanyController::class, 'store']);
+                Route::put('/customer-companies/{customerCompany}', [CustomerCompanyController::class, 'update']);
+                Route::delete('/customer-companies/{customerCompany}', [CustomerCompanyController::class, 'destroy']);
             });
         });
     });

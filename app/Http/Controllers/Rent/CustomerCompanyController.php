@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Http\Controllers\Rent;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Rent\CustomerCompanyRequest;
+use App\Http\Resources\Rent\CustomerCompanyResource;
+use App\Models\Rent\CustomerCompany;
+use Illuminate\Http\Request;
+
+class CustomerCompanyController extends Controller
+{
+    public function index(Request $request)
+    {
+        $data = $request->validate([
+            'search'   => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
+        ]);
+
+        $companies = CustomerCompany::query()
+            ->when($data['search'] ?? null, function ($query, string $search) {
+                // Escape LIKE wildcards typed by the user
+                $term = addcslashes($search, '%_\\') . '%';
+
+                $query->where(function ($q) use ($term) {
+                    $q->where('name', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhere('email', 'like', $term);
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate($data['per_page'] ?? 15);
+
+        return CustomerCompanyResource::collection($companies);
+    }
+
+    public function store(CustomerCompanyRequest $request)
+    {
+        $company = CustomerCompany::create($request->validated());
+
+        return (new CustomerCompanyResource($company))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function show(CustomerCompany $customerCompany)
+    {
+        return new CustomerCompanyResource($customerCompany);
+    }
+
+    public function update(CustomerCompanyRequest $request, CustomerCompany $customerCompany)
+    {
+        $customerCompany->update($request->validated());
+
+        return new CustomerCompanyResource($customerCompany->fresh());
+    }
+
+    public function destroy(CustomerCompany $customerCompany)
+    {
+        $customerCompany->delete();
+
+        return response()->noContent();
+    }
+}
