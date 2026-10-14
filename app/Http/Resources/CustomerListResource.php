@@ -12,6 +12,7 @@ class CustomerListResource extends JsonResource
         return [
             'id'                => $this->id,
             'name'              => $this->name,
+            'nationality'       => $this->details?->nationality,
             'is_blacklist'      => $this->is_blacklist,
             'is_multi_contract' => $this->is_multi_contract,
         ];
