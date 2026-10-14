@@ -22,7 +22,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
             Route::post('/logout', [AuthController::class, 'logout']);
 
             // Rent product
-            Route::middleware('module:rent')->prefix('rent')->group(function () {
+            Route::middleware(['module:rent', \App\Http\Middleware\NoCache::class])->prefix('rent')->group(function () {
                 Route::get('customers', [CustomerController::class, 'index']);
                 Route::get('/customers/{customer}', [CustomerController::class, 'show']);
                 Route::post('/customers', [CustomerController::class, 'store']);
