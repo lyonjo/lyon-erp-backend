@@ -6,7 +6,6 @@ use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\{
     EnsureModuleActive,
     VerifyStoreSignature,
-    Nocache,
 };
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -17,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(append: [NoCache::class]);
+        $middleware->api(append: [App\Http\Middleware\NoCache::class]);
         $middleware->alias([
             'module' => EnsureModuleActive::class,
             'store.auth' => VerifyStoreSignature::class,
