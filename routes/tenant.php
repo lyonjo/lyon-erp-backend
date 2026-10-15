@@ -45,6 +45,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/companies', [CompanyController::class, 'store']);
                 Route::put('/companies/{company}', [CompanyController::class, 'update']);
                 Route::delete('/companies/{company}', [CompanyController::class, 'destroy']);
+                Route::get('/companies/{company}/logo', [CompanyController::class, 'logo']);
             });
         });
     });

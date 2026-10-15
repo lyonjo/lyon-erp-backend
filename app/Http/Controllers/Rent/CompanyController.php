@@ -102,4 +102,23 @@ class CompanyController extends Controller
 
         return response()->noContent();
     }
+    public function logo(Company $company)
+    {
+        $image = $company->logo;
+
+        if (! $image) {
+            abort(404, 'Company logo not found.');
+        }
+
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($image->path)) {
+            abort(404, 'Company logo file not found.');
+        }
+
+        return $disk->response($image->path, null, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
 }
