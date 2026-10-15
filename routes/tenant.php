@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Rent\CustomerController;
 use App\Http\Controllers\Rent\CustomerCompanyController;
 use App\Http\Controllers\Rent\BlackListController;
+use App\Http\Controllers\Rent\CompanyController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -39,6 +40,11 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::put('/customer-companies/{customerCompany}', [CustomerCompanyController::class, 'update']);
                 Route::delete('/customer-companies/{customerCompany}', [CustomerCompanyController::class, 'destroy']);
                 Route::get('/blacklist', [BlackListController::class, 'index']);
+                Route::get('/companies', [CompanyController::class, 'index']);
+                Route::get('/companies/{company}', [CompanyController::class, 'show']);
+                Route::post('/companies', [CompanyController::class, 'store']);
+                Route::put('/companies/{company}', [CompanyController::class, 'update']);
+                Route::delete('/companies/{company}', [CompanyController::class, 'destroy']);
             });
         });
     });
