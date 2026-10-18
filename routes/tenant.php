@@ -15,6 +15,7 @@ use App\Http\Controllers\Rent\RentMediaController;
 use App\Http\Controllers\Rent\AdminLogController;
 use App\Http\Controllers\Rent\BankController;
 use App\Http\Controllers\Rent\TenantLoginImageController;
+use App\Http\Controllers\Rent\BranchController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -60,6 +61,12 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::delete('/banks/{bank}', [BankController::class, 'destroy']);
                 Route::post('/login-branding/{slot}', [TenantLoginImageController::class, 'update']);
                 Route::delete('/login-branding/{slot}', [TenantLoginImageController::class, 'delete']);
+                Route::get('admin-logs', [AdminLogController::class, 'index']);
+                Route::get('/branches/{branch}', [BranchController::class, 'index']);
+                Route::get('/banks/{bank}', [BranchController::class, 'show']);
+                Route::post('/branches', [BranchController::class, 'store']);
+                Route::put('/branches/{branch}', [BranchController::class, 'update']);
+                Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
             });
         });
     });
