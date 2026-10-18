@@ -13,6 +13,7 @@ use App\Http\Controllers\Rent\BlackListController;
 use App\Http\Controllers\Rent\CompanyController;
 use App\Http\Controllers\Rent\RentMediaController;
 use App\Http\Controllers\Rent\AdminLogController;
+use App\Http\Controllers\Rent\BankController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -50,6 +51,11 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/customers/{customer}/documents/{type}', [RentMediaController::class, 'customerDocument']);
                 Route::get('/companies/{company}/logo', [RentMediaController::class, 'companyLogo']);
                 Route::get('admin-logs', [AdminLogController::class, 'index']);
+                Route::get('/banks', [BankController::class, 'index']);
+                Route::get('/banks/{bank}', [BankController::class, 'show']);
+                Route::post('/banks', [BankController::class, 'store']);
+                Route::put('/banks/{bank}', [BankController::class, 'update']);
+                Route::delete('/banks/{bank}', [BankController::class, 'destroy']);
             });
         });
     });
