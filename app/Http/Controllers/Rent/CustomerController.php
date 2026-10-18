@@ -12,6 +12,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
+use App\Services\Rent\AdminLogger;
 
 class CustomerController extends Controller
 {
@@ -54,7 +55,13 @@ class CustomerController extends Controller
                 $customer->details()->create($data['details'] ?? []);
 
                 $this->saveImages($customer, $request, $newPaths);
-
+                AdminLogger::log(
+                    action: 'created',
+                    model: Customer::class,
+                    modelId: $customer->id,
+                    description: "Created customer #{$customer->id}",
+                    data: $customer->toArray()
+                );
                 return $customer;
             });
         } catch (Throwable $e) {
@@ -89,6 +96,13 @@ class CustomerController extends Controller
                 }
 
                 $this->saveImages($customer, $request, $newPaths, $oldPaths);
+                AdminLogger::log(
+                    action: 'updated',
+                    model: Customer::class,
+                    modelId: $customer->id,
+                    description: "Updated customer #{$customer->id}",
+                    data: $customer->toArray()
+                );
             });
         } catch (Throwable $e) {
             Storage::disk('public')->delete($newPaths);

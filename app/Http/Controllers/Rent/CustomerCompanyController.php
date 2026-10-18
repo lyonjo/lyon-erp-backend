@@ -7,6 +7,7 @@ use App\Http\Requests\Rent\CustomerCompanyRequest;
 use App\Http\Resources\Rent\CustomerCompanyResource;
 use App\Models\Rent\CustomerCompany;
 use Illuminate\Http\Request;
+use App\Services\Rent\AdminLogger;
 
 class CustomerCompanyController extends Controller
 {
@@ -41,7 +42,13 @@ class CustomerCompanyController extends Controller
     public function store(CustomerCompanyRequest $request)
     {
         $company = CustomerCompany::create($request->validated());
-
+        AdminLogger::log(
+            action: 'created',
+            model: CustomerCompany::class,
+            modelId: $company->id,
+            description: "Created customer company #{$company->id}",
+            data: $company->toArray()
+        );
         return (new CustomerCompanyResource($company))
             ->response()
             ->setStatusCode(201);
@@ -55,7 +62,13 @@ class CustomerCompanyController extends Controller
     public function update(CustomerCompanyRequest $request, CustomerCompany $customerCompany)
     {
         $customerCompany->update($request->validated());
-
+        AdminLogger::log(
+            action: 'updated',
+            model: CustomerCompany::class,
+            modelId: $customerCompany->id,
+            description: "Created customer company #{$customerCompany->id}",
+            data: $customerCompany->toArray()
+        );
         return new CustomerCompanyResource($customerCompany->fresh());
     }
 

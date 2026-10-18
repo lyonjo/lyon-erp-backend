@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
+use App\Services\Rent\AdminLogger;
 
 class CompanyController extends Controller
 {
@@ -40,7 +41,13 @@ class CompanyController extends Controller
                 $company = Company::create(collect($data)->except('logo')->all());
                 $newPath = $request->file('logo')->store("companies/{$company->id}", 'public');
                 $company->logo()->create(['type' => 'logo', 'path' => $newPath]);
-
+                AdminLogger::log(
+                    action: 'created',
+                    model: Company::class,
+                    modelId: $company->id,
+                    description: "Created company #{$company->id}",
+                    data: $company->toArray()
+                );
                 return $company;
             });
         } catch (Throwable $e) {
@@ -66,7 +73,13 @@ class CompanyController extends Controller
                 }
 
                 $company->update(collect($data)->except('logo')->all());
-
+                AdminLogger::log(
+                    action: 'updated',
+                    model: Company::class,
+                    modelId: $company->id,
+                    description: "Updated company #{$company->id}",
+                    data: $company->toArray()
+                );
                 if ($request->hasFile('logo')) {
                     $newPath = $request->file('logo')->store("companies/{$company->id}", 'public');
                     $logo = $company->logo()->first();

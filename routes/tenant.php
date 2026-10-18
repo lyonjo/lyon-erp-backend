@@ -12,6 +12,7 @@ use App\Http\Controllers\Rent\CustomerCompanyController;
 use App\Http\Controllers\Rent\BlackListController;
 use App\Http\Controllers\Rent\CompanyController;
 use App\Http\Controllers\Rent\RentMediaController;
+use App\Http\Controllers\Rent\AdminLogController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -48,6 +49,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::delete('/companies/{company}', [CompanyController::class, 'destroy']);
                 Route::get('/customers/{customer}/documents/{type}', [RentMediaController::class, 'customerDocument']);
                 Route::get('/companies/{company}/logo', [RentMediaController::class, 'companyLogo']);
+                Route::get('admin-logs', [AdminLogController::class, 'index']);
             });
         });
     });
