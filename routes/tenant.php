@@ -14,13 +14,15 @@ use App\Http\Controllers\Rent\CompanyController;
 use App\Http\Controllers\Rent\RentMediaController;
 use App\Http\Controllers\Rent\AdminLogController;
 use App\Http\Controllers\Rent\BankController;
+use App\Http\Controllers\Rent\TenantLoginImageController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
     ->prefix('api/t')
     ->group(function () {
         Route::get('/settings', [SettingsController::class, 'show']);
-
+        Route::get('/login-branding', [TenantLoginImageController::class, 'index']);
+        Route::get('/login-branding/{slot}', [TenantLoginImageController::class, 'show']);
         Route::post('/login', [AuthController::class, 'login'])
             ->middleware('throttle:10,1');
 
@@ -56,6 +58,8 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/banks', [BankController::class, 'store']);
                 Route::put('/banks/{bank}', [BankController::class, 'update']);
                 Route::delete('/banks/{bank}', [BankController::class, 'destroy']);
+                Route::post('/login-branding/{slot}', [TenantLoginImageController::class, 'update']);
+                Route::delete('/login-branding/{slot}', [TenantLoginImageController::class, 'delete']);
             });
         });
     });
