@@ -25,6 +25,7 @@ class VehicleSaveRequest extends FormRequest
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'vin_number' => ['nullable', 'string', 'max:100'],
             'engine_number' => ['nullable', 'string', 'max:100'],
+            'engine_size' => ['nullable', 'numeric', 'min:0'],
             'registration_number' => ['nullable', 'string', 'max:100'],
             'fuel_type' => ['required', Rule::in(['gasoline', 'diesel', 'electric', 'hyprid'])],
             'passengers_number' => ['required', 'integer', 'between:1,100'],
