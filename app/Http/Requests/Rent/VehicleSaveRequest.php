@@ -38,11 +38,6 @@ class VehicleSaveRequest extends FormRequest
             'status' => ['required', 'boolean'],
             'features' => ['sometimes', 'array'],
             'features.*' => ['integer', 'distinct', 'exists:extra_features,id'],
-            'main_image' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
-            'gallery' => ['sometimes', 'array', 'max:12'],
-            'gallery.*' => ['image', 'mimes:jpeg,png,webp', 'max:4096'],
-            'delete_image_ids' => ['sometimes', 'array'],
-            'delete_image_ids.*' => ['integer', 'distinct'],
         ];
     }
 }

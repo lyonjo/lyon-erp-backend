@@ -72,7 +72,6 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/vehicles/{vehicle}', [VehicleManagementController::class, 'show']);
                 Route::put('/vehicles/{vehicle}', [VehicleManagementController::class, 'update']);
                 Route::delete('/vehicles/{vehicle}', [VehicleManagementController::class, 'destroy']);
-                Route::get('/vehicles/{vehicle}/images/{image}', [VehicleManagementController::class, 'image']);
                 Route::get('/vehicle-features/{feature}/image', [VehicleCatalogController::class, 'featureImage']);
                 Route::get('/vehicle-catalog/{kind}', [VehicleCatalogController::class, 'index'])->whereIn('kind', ['brands', 'models', 'features']);
                 Route::post('/vehicle-catalog/{kind}', [VehicleCatalogController::class, 'store'])->whereIn('kind', ['brands', 'models', 'features']);
