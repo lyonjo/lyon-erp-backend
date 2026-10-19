@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Vehicle extends Model
 {
     protected $table = 'vehicles';
-    protected $fillable = ['number', 'brand_id', 'model_id', 'model_year', 'company_id', 'branch_id', 'vin_number', 'engine_number', 'registration_number', 'fuel_type', 'passengers_number', 'gearbox_type', 'has_blutooth', 'has_camera', 'license_expiration', 'insurance_expiration', 'current_km', 'odometer', 'current_location', 'status'];
+    protected $fillable = ['number', 'brand_id', 'model_id', 'model_year', 'company_id', 'branch_id', 'vin_number', 'engine_number', 'engine_size', 'registration_number', 'fuel_type', 'passengers_number', 'gearbox_type', 'has_blutooth', 'has_camera', 'license_expiration', 'insurance_expiration', 'current_km', 'odometer', 'current_location', 'status'];
     protected $casts = ['model_year' => 'integer', 'passengers_number' => 'integer', 'current_km' => 'integer', 'odometer' => 'integer', 'has_blutooth' => 'boolean', 'has_camera' => 'boolean', 'status' => 'boolean', 'license_expiration' => 'date:Y-m-d', 'insurance_expiration' => 'date:Y-m-d'];
     public function brand(): BelongsTo
     {
