@@ -16,6 +16,8 @@ use App\Http\Controllers\Rent\AdminLogController;
 use App\Http\Controllers\Rent\BankController;
 use App\Http\Controllers\Rent\TenantLoginImageController;
 use App\Http\Controllers\Rent\BranchController;
+use App\Http\Controllers\Rent\VehicleManagementController;
+use App\Http\Controllers\Rent\VehicleCatalogController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -38,8 +40,6 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/customers', [CustomerController::class, 'store']);
                 Route::put('/customers/{customer}', [CustomerController::class, 'update']);
                 Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
-                Route::get('/vehicles', [VehicleController::class, 'index']);
-                Route::post('/vehicles', [VehicleController::class, 'store']);
                 Route::get('/customer-companies', [CustomerCompanyController::class, 'index']);
                 Route::get('/customer-companies/{customerCompany}', [CustomerCompanyController::class, 'show']);
                 Route::post('/customer-companies', [CustomerCompanyController::class, 'store']);
@@ -67,6 +67,17 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/branches', [BranchController::class, 'store']);
                 Route::put('/branches/{branch}', [BranchController::class, 'update']);
                 Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
+                Route::get('/vehicles', [VehicleManagementController::class, 'index']);
+                Route::post('/vehicles', [VehicleManagementController::class, 'store']);
+                Route::get('/vehicles/{vehicle}', [VehicleManagementController::class, 'show']);
+                Route::put('/vehicles/{vehicle}', [VehicleManagementController::class, 'update']);
+                Route::delete('/vehicles/{vehicle}', [VehicleManagementController::class, 'destroy']);
+                Route::get('/vehicles/{vehicle}/images/{image}', [VehicleManagementController::class, 'image']);
+                Route::get('/vehicle-features/{feature}/image', [VehicleCatalogController::class, 'featureImage']);
+                Route::get('/vehicle-catalog/{kind}', [VehicleCatalogController::class, 'index'])->whereIn('kind', ['brands', 'models', 'features']);
+                Route::post('/vehicle-catalog/{kind}', [VehicleCatalogController::class, 'store'])->whereIn('kind', ['brands', 'models', 'features']);
+                Route::put('/vehicle-catalog/{kind}/{id}', [VehicleCatalogController::class, 'update'])->whereIn('kind', ['brands', 'models', 'features']);
+                Route::delete('/vehicle-catalog/{kind}/{id}', [VehicleCatalogController::class, 'destroy'])->whereIn('kind', ['brands', 'models', 'features']);
             });
         });
     });
