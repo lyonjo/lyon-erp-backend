@@ -34,6 +34,7 @@ return new class extends Migration {
             $t->foreignId('branch_id')->constrained('branches')->restrictOnDelete();
             $t->string('vin_number', 100)->nullable();
             $t->string('engine_number', 100)->nullable();
+            $t->unsignedSmallInteger('engine_size')->nullable();
             $t->string('registration_number', 100)->nullable();
             $t->enum('fuel_type', ['gasoline', 'diesel', 'electric', 'hyprid']);
             $t->unsignedTinyInteger('passengers_number');
@@ -64,4 +65,3 @@ return new class extends Migration {
         Schema::dropIfExists('brands');
     }
 };
-        
