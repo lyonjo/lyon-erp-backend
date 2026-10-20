@@ -25,6 +25,7 @@ use App\Http\Controllers\Rent\SupplierController;
 use App\Http\Controllers\Rent\ServiceController;
 use App\Http\Controllers\Rent\ExternalVehicleController;
 use App\Http\Controllers\Rent\CarRentalPriceController;
+use App\Http\Controllers\Rent\CompanyCarRentalPriceController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -127,6 +128,10 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('car-rental-prices/{carRentalPrice}', [CarRentalPriceController::class, 'show']);
                 Route::put('car-rental-prices/{carRentalPrice}', [CarRentalPriceController::class, 'update']);
                 Route::delete('car-rental-prices/{carRentalPrice}', [CarRentalPriceController::class, 'destroy']);
+                Route::get('/car-rental-prices/company/companies', [CompanyCarRentalPriceController::class, 'companies']);
+                Route::get('/car-rental-prices/company/cars', [CompanyCarRentalPriceController::class, 'index']);
+                Route::get('/car-rental-prices/company/edit-data', [CompanyCarRentalPriceController::class, 'editData']);
+                Route::post('/car-rental-prices/company/save', [CompanyCarRentalPriceController::class, 'save']);
             });
         });
     });
