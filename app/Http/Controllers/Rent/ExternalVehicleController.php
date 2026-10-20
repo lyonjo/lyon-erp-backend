@@ -25,9 +25,9 @@ class ExternalVehicleController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('number', 'like', "%{$search}%")
                     ->orWhere('vin_number', 'like', "%{$search}%")
-                    ->orWhereHas('supplier', fn($s) => $s->where('supplier_name', 'like', "%{$search}%"))
-                    ->orWhereHas('brand', fn($b) => $b->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('model', fn($m) => $m->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('supplier', fn ($s) => $s->where('supplier_name', 'like', "%{$search}%"))
+                    ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('model', fn ($m) => $m->where('name', 'like', "%{$search}%"));
             });
         }
         $paginator = $query->orderByDesc('id')->paginate($perPage);
@@ -48,7 +48,13 @@ class ExternalVehicleController extends Controller
         $brands = VehicleBrand::query()->orderBy('name')->get(['id', 'name']);
         $models = VehicleModel::query()->orderBy('name')->get(['id', 'brand_id', 'name']);
         $suppliers = Supplier::query()
-            ->when($search !== '', fn($q) => $q->where('supplier_name', 'like', "%{$search}%"))
+            ->whereHas('services', function ($serviceQuery) {
+                $serviceQuery->whereRaw('LOWER(TRIM(name)) IN (?, ?)', [
+                    'rent car',
+                    'تأجير السيارات',
+                ]);
+            })
+            ->when($search !== '', fn ($q) => $q->where('supplier_name', 'like', "%{$search}%"))
             ->orderBy('supplier_name')->get(['id', 'supplier_name']);
         $branches = Branch::query()->orderBy('name')->get(['id', 'name']);
         return response()->json(['data' => compact('brands', 'models', 'suppliers', 'branches')]);

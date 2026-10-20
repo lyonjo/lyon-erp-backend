@@ -7,6 +7,7 @@ namespace App\Http\Requests\Rent;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use App\Models\Rent\VehicleModel;
+use App\Models\Rent\Supplier;
 
 class ExternalVehicleRequest extends FormRequest
 {
@@ -39,7 +40,23 @@ class ExternalVehicleRequest extends FormRequest
                 }
             }],
             'model_year' => ['required', 'integer', 'between:1950,2100'],
-            'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
+            'supplier_id' => [
+                'required',
+                'integer',
+                'exists:suppliers,id',
+                function ($attribute, $value, $fail) {
+                    if (!Supplier::query()
+                        ->whereKey($value)
+                        ->whereHas('services', function ($serviceQuery) {
+                            $serviceQuery->whereRaw('LOWER(TRIM(name)) IN (?, ?)', [
+                                'rent car',
+                                'تأجير السيارات',
+                            ]);
+                        })->exists()) {
+                        $fail('The selected supplier must provide the rent car service (rent car / تأجير السيارات).');
+                    }
+                },
+            ],
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'vin_number' => ['nullable', 'string', 'max:100'],
             'engine_number' => ['nullable', 'string', 'max:100'],
