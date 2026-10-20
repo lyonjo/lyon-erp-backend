@@ -19,6 +19,7 @@ use App\Http\Controllers\Rent\BranchController;
 use App\Http\Controllers\Rent\VehicleManagementController;
 use App\Http\Controllers\Rent\VehicleCatalogController;
 use App\Http\Controllers\Rent\VehicleMaintenanceController;
+use App\Http\Controllers\Rent\SoldCarController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -85,6 +86,13 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/vehicle-maintenances', [VehicleMaintenanceController::class, 'store']);
                 Route::put('/vehicle-maintenances/{vehicleMaintenance}', [VehicleMaintenanceController::class, 'update']);
                 Route::delete('/vehicle-maintenances/{vehicleMaintenance}', [VehicleMaintenanceController::class, 'destroy']);
+                Route::get('/sold-cars', [SoldCarController::class, 'index']);
+                Route::get('/sold-cars/vehicle-options', [SoldCarController::class, 'vehicleOptions']);
+                Route::get('/sold-cars/company-options', [SoldCarController::class, 'companyOptions']);
+                Route::get('/sold-cars/{soldCar}', [SoldCarController::class, 'show']);
+                Route::post('/sold-cars', [SoldCarController::class, 'store']);
+                Route::put('/sold-cars/{soldCar}', [SoldCarController::class, 'update']);
+                Route::delete('/sold-cars/{soldCar}', [SoldCarController::class, 'destroy']);
             });
         });
     });

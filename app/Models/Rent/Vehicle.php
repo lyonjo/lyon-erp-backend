@@ -5,6 +5,7 @@ namespace App\Models\Rent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Vehicle extends Model
 {
@@ -74,5 +75,9 @@ class Vehicle extends Model
             'car_id',
             'feature_id'
         );
+    }
+    public function soldCar(): HasOne
+    {
+        return $this->hasOne(SoldCar::class, 'vehicle_id');
     }
 }
