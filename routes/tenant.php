@@ -18,6 +18,7 @@ use App\Http\Controllers\Rent\TenantLoginImageController;
 use App\Http\Controllers\Rent\BranchController;
 use App\Http\Controllers\Rent\VehicleManagementController;
 use App\Http\Controllers\Rent\VehicleCatalogController;
+use App\Http\Controllers\Rent\VehicleMaintenanceController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -77,6 +78,13 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/vehicle-catalog/{kind}', [VehicleCatalogController::class, 'store'])->whereIn('kind', ['brands', 'models', 'features']);
                 Route::put('/vehicle-catalog/{kind}/{id}', [VehicleCatalogController::class, 'update'])->whereIn('kind', ['brands', 'models', 'features']);
                 Route::delete('/vehicle-catalog/{kind}/{id}', [VehicleCatalogController::class, 'destroy'])->whereIn('kind', ['brands', 'models', 'features']);
+                Route::get('/vehicle-maintenances/services', [VehicleMaintenanceController::class, 'services']);
+                Route::get('/vehicle-maintenances/vehicle-options', [VehicleMaintenanceController::class, 'vehicleOptions']);
+                Route::get('/vehicle-maintenances', [VehicleMaintenanceController::class, 'index']);
+                Route::get('/vehicle-maintenances/{vehicleMaintenance}', [VehicleMaintenanceController::class, 'show']);
+                Route::post('/vehicle-maintenances', [VehicleMaintenanceController::class, 'store']);
+                Route::put('/vehicle-maintenances/{vehicleMaintenance}', [VehicleMaintenanceController::class, 'update']);
+                Route::delete('/vehicle-maintenances/{vehicleMaintenance}', [VehicleMaintenanceController::class, 'destroy']);
             });
         });
     });
