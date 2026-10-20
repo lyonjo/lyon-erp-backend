@@ -20,6 +20,7 @@ use App\Http\Controllers\Rent\VehicleManagementController;
 use App\Http\Controllers\Rent\VehicleCatalogController;
 use App\Http\Controllers\Rent\VehicleMaintenanceController;
 use App\Http\Controllers\Rent\SoldCarController;
+use App\Http\Controllers\Rent\DriverController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -93,6 +94,11 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/sold-cars', [SoldCarController::class, 'store']);
                 Route::put('/sold-cars/{soldCar}', [SoldCarController::class, 'update']);
                 Route::delete('/sold-cars/{soldCar}', [SoldCarController::class, 'destroy']);
+                Route::get('/drivers', [DriverController::class, 'index']);
+                Route::post('/drivers', [DriverController::class, 'store']);
+                Route::get('/drivers/{driver}', [DriverController::class, 'show']);
+                Route::put('/drivers/{driver}', [DriverController::class, 'update']);
+                Route::delete('/drivers/{driver}', [DriverController::class, 'destroy']);
             });
         });
     });
