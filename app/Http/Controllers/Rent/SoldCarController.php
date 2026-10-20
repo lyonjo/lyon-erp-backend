@@ -84,7 +84,8 @@ class SoldCarController extends Controller
         $query = Vehicle::query()->with(['brand', 'model'])
             ->where(function ($q) use ($includeId) {
                 $q->whereDoesntHave('soldCar');
-                if ($includeId > 0) $q->orWhereKey($includeId);
+                if ($includeId > 0)
+                    $q->orWhere('id', $includeId);
             });
         $search = trim($data['search'] ?? '');
         if ($search !== '') {
