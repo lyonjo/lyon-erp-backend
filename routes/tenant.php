@@ -21,6 +21,8 @@ use App\Http\Controllers\Rent\VehicleCatalogController;
 use App\Http\Controllers\Rent\VehicleMaintenanceController;
 use App\Http\Controllers\Rent\SoldCarController;
 use App\Http\Controllers\Rent\DriverController;
+use App\Http\Controllers\Rent\SupplierController;
+use App\Http\Controllers\Rent\ServiceController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -99,6 +101,17 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/drivers/{driver}', [DriverController::class, 'show']);
                 Route::put('/drivers/{driver}', [DriverController::class, 'update']);
                 Route::delete('/drivers/{driver}', [DriverController::class, 'destroy']);
+                Route::get('/suppliers', [SupplierController::class, 'index']);
+                Route::post('/suppliers', [SupplierController::class, 'store']);
+                Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+                Route::put('/suppliers/{supplier}', [SupplierController::class, 'update']);
+                Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy']);
+                Route::get('/services/options', [ServiceController::class, 'options']);
+                Route::get('/services', [ServiceController::class, 'index']);
+                Route::post('/services', [ServiceController::class, 'store']);
+                Route::get('/services/{service}', [ServiceController::class, 'show']);
+                Route::put('/services/{service}', [ServiceController::class, 'update']);
+                Route::delete('/services/{service}', [ServiceController::class, 'destroy']);
             });
         });
     });
