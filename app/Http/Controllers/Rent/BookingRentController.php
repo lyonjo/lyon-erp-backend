@@ -29,7 +29,7 @@ class BookingRentController extends Controller
     }
     private function basePrice(Vehicle $car): ?CarRentalPrice
     {
-        return CarRentalPrice::query()->where('brand_id', $car->brand_id)->where('model_id', $car->model_id)->where('model_year', $car->model_year)->where('client_type', 'customer')->latest('id')->first();
+        return CarRentalPrice::query()->where('brand_id', $car->brand_id)->where('model_id', $car->model_id)->where('model_year', $car->model_year)->where('client_type', 'customer')->whereNull('company_id')->latest('id')->first();
     }
     private function companyPrice(Vehicle $car, int $companyId): ?CarRentalPrice
     {
@@ -54,16 +54,17 @@ class BookingRentController extends Controller
     }
     private function candidate(Vehicle $car, array $data, CarbonImmutable $start, CarbonImmutable $end, int $days): ?array
     {
-        $base = $this->basePrice($car);
-        $baseRate = $this->rate($base, $start, $end, $days);
-        if ($baseRate === null || $this->overlaps($car->id, $start, $end)) return null;
-        $companyRate = null;
+        if ($this->overlaps($car->id, $start, $end)) return null;
+        // Select pricing exclusively for the requested client type. Do not fall back
+        // to another company's rates or to customer rates for company bookings.
         if ($data['client_type'] === 'company') {
-            $override = $this->companyPrice($car, (int)$data['customer_company_id']);
-            $companyRate = $this->rate($override, $start, $end, $days);
-            if ($companyRate === null) return null;
+            $price = $this->companyPrice($car, (int)$data['customer_company_id']);
+        } else {
+            $price = $this->basePrice($car);
         }
-        return ['car_id' => $car->id, 'number' => $car->number, 'brand' => $car->brand?->name, 'model' => $car->model?->name, 'model_year' => $car->model_year, 'company_id' => $car->company_id, 'company_name' => $car->company?->name, 'current_location' => $car->current_location, 'branch_id' => $car->branch_id, 'day_price' => $data['client_type'] === 'company' ? $companyRate : $baseRate, 'day_company_price' => $data['client_type'] === 'company' ? $companyRate : $baseRate, 'total_days' => $days];
+        $dailyRate = $this->rate($price, $start, $end, $days);
+        if ($dailyRate === null) return null;
+        return ['car_id' => $car->id, 'number' => $car->number, 'brand' => $car->brand?->name, 'model' => $car->model?->name, 'model_year' => $car->model_year, 'company_id' => $car->company_id, 'company_name' => $car->company?->name, 'current_location' => $car->current_location, 'branch_id' => $car->branch_id, 'day_price' => $dailyRate, 'day_company_price' => $dailyRate, 'total_days' => $days];
     }
     public function options(Request $request): JsonResponse
     {
