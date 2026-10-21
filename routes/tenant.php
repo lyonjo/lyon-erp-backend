@@ -27,6 +27,7 @@ use App\Http\Controllers\Rent\ExternalVehicleController;
 use App\Http\Controllers\Rent\CarRentalPriceController;
 use App\Http\Controllers\Rent\CompanyCarRentalPriceController;
 use App\Http\Controllers\Rent\SettingsController as RentSettings;
+use App\Http\Controllers\Rent\ExtraItemController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -135,6 +136,11 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/car-rental-prices/company/save', [CompanyCarRentalPriceController::class, 'save']);
                 Route::get('/settings', [RentSettings::class, 'index']);
                 Route::put('/settings', [RentSettings::class, 'update']);
+                Route::get('/extra-items', [ExtraItemController::class, 'index']);
+                Route::post('/extra-items', [ExtraItemController::class, 'store']);
+                Route::get('/extra-items/{extraItem}', [ExtraItemController::class, 'show']);
+                Route::put('/extra-items/{extraItem}', [ExtraItemController::class, 'update']);
+                Route::delete('/extra-items/{extraItem}', [ExtraItemController::class, 'destroy']);
             });
         });
     });
