@@ -29,6 +29,7 @@ use App\Http\Controllers\Rent\CompanyCarRentalPriceController;
 use App\Http\Controllers\Rent\SettingsController as RentSettings;
 use App\Http\Controllers\Rent\ExtraItemController;
 use App\Http\Controllers\Rent\BookingRentController;
+use App\Http\Controllers\Rent\CarReservationController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -147,6 +148,12 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/bookings', [BookingRentController::class, 'index']);
                 Route::post('/bookings', [BookingRentController::class, 'store']);
                 Route::get('/bookings/{booking}', [BookingRentController::class, 'show']);
+                Route::get('/car-reservations/cars', [CarReservationController::class, 'index']);
+                Route::get('/car-reservations/cars/{car}', [CarReservationController::class, 'show']);
+                Route::get('/car-reservations/cars/{car}/booking-options', [CarReservationController::class, 'bookingOptions']);
+                Route::post('/car-reservations/cars/{car}', [CarReservationController::class, 'assign']);
+                Route::put('/car-reservations/cars/{car}/{reservation}', [CarReservationController::class, 'update']);
+                Route::delete('/car-reservations/cars/{car}/{reservation}', [CarReservationController::class, 'destroy']);
             });
         });
     });

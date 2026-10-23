@@ -23,11 +23,9 @@ class BookingRentRequest extends FormRequest
             'end_time' => ['required', 'date_format:H:i'],
             'pick_up_branch_id' => ['required', 'integer', 'exists:branches,id'],
             'return_branch_id' => ['required', 'integer', 'exists:branches,id'],
-            'car_id' => ['required', 'integer', 'exists:vehicles,id'],
+            'car_rental_price_id' => ['required', 'integer', 'exists:car_rental_prices,id'],
             'extra_item_ids' => ['sometimes', 'array', 'max:100'],
             'extra_item_ids.*' => ['integer', 'distinct', 'exists:extra_items,id'],
-            'is_taxable' => ['required', 'boolean'],
-            'payment_method' => ['required', Rule::in(['cash', 'online'])],
         ];
     }
 }
