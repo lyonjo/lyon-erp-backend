@@ -148,6 +148,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/bookings', [BookingRentController::class, 'index']);
                 Route::post('/bookings', [BookingRentController::class, 'store']);
                 Route::get('/bookings/{booking}', [BookingRentController::class, 'show']);
+                Route::patch('/bookings/{booking}/reject', [BookingRentController::class, 'reject']);
                 Route::get('/car-reservations/cars', [CarReservationController::class, 'index']);
                 Route::get('/car-reservations/cars/{car}', [CarReservationController::class, 'show']);
                 Route::get('/car-reservations/cars/{car}/booking-options', [CarReservationController::class, 'bookingOptions']);

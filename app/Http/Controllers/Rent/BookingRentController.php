@@ -199,6 +199,21 @@ class BookingRentController extends Controller
     }
     return response()->json($q->orderByDesc('id')->paginate($d['per_page'] ?? 15));
   }
+  public function reject(Booking $booking): JsonResponse
+  {
+    abort_unless($booking->service === 'rent', 404);
+    $updated = DB::transaction(function () use ($booking) {
+      $locked = Booking::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+      if (!in_array($locked->status, ['pending', 'online_pending'], true))
+        throw ValidationException::withMessages(['status' => ['Only pending or online-pending bookings can be rejected.']]);
+      if ($locked->reservation()->exists() || $locked->car_id !== null)
+        throw ValidationException::withMessages(['status' => ['Cannot reject a booking already assigned to a car.']]);
+      $locked->status = 'rejected';
+      $locked->save();
+      return $locked;
+    }, 3);
+    return response()->json(['message' => 'Booking rejected.', 'data' => ['id' => $updated->id, 'status' => $updated->status]]);
+  }
   public function show(Booking $booking): JsonResponse
   {
     abort_unless($booking->service === 'rent', 404);
