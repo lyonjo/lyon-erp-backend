@@ -66,13 +66,31 @@ class BookingRentController extends Controller
       'return_branch_id' => ['required', 'exists:branches,id']
     ]);
   }
+
+  /** The existing customer and customer-company screens use is_blacklist. */
+  private function eligibleClients(\Illuminate\Database\Eloquent\Builder $query, string $table): \Illuminate\Database\Eloquent\Builder
+  {
+    if (!Schema::hasColumn($table, 'is_blacklist')) throw new \RuntimeException("Missing {$table}.is_blacklist column: cannot safely filter blacklisted clients.");
+    return $query->where(function ($q) {
+      $q->where('is_blacklist', 0)->orWhereNull('is_blacklist');
+    });
+  }
+  private function ensureEligibleClient(array $data): void
+  {
+    $company = $data['client_type'] === 'company';
+    $table = $company ? 'customer_companies' : 'customers';
+    $id = $company ? $data['customer_company_id'] : $data['customer_id'];
+    $model = $company ? CustomerCompany::query() : Customer::query();
+    if (!$this->eligibleClients($model, $table)->whereKey($id)->exists())
+      throw ValidationException::withMessages([$company ? 'customer_company_id' : 'customer_id' => ['The selected client is blacklisted or unavailable.']]);
+  }
   public function options(Request $r): JsonResponse
   {
     $companyName = Schema::hasColumn('customer_companies', 'name') ? 'name' : 'company_name';
     $customerName = Schema::hasColumn('customers', 'name') ? 'name' : (Schema::hasColumn('customers', 'customer_name') ? 'customer_name' : 'id');
     return response()->json(['data' => [
-      'customers' => Customer::select('id')->selectRaw("`{$customerName}` as name")->orderBy($customerName)->limit(1000)->get(),
-      'customer_companies' => CustomerCompany::select('id')->selectRaw("`{$companyName}` as name")->orderBy($companyName)->limit(1000)->get(),
+      'customers' => $this->eligibleClients(Customer::query(), 'customers')->select('id')->selectRaw("`{$customerName}` as name")->orderBy($customerName)->limit(1000)->get(),
+      'customer_companies' => $this->eligibleClients(CustomerCompany::query(), 'customer_companies')->select('id')->selectRaw("`{$companyName}` as name")->orderBy($companyName)->limit(1000)->get(),
       'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
       'extra_items' => ExtraItem::select('id', 'name', 'price', 'is_daily')->orderBy('name')->get(),
       'settings' => $this->settings()
@@ -81,6 +99,7 @@ class BookingRentController extends Controller
   public function search(Request $r): JsonResponse
   {
     $d = $this->validateSearch($r);
+    $this->ensureEligibleClient($d);
     [$start, $end, $days] = $this->duration($d);
     $rows = [];
     // Each pricing ID is a different contractual rate; distinct physical cars are only counted for availability.
@@ -120,6 +139,7 @@ class BookingRentController extends Controller
   public function store(BookingRentRequest $r): JsonResponse
   {
     $d = $r->validated();
+    $this->ensureEligibleClient($d);
     [$start, $end, $days] = $this->duration($d);
     $booking = DB::transaction(function () use ($d, $start, $end, $days) {
       $price = CarRentalPrice::query()->lockForUpdate()->findOrFail($d['car_rental_price_id']);
@@ -182,6 +202,61 @@ class BookingRentController extends Controller
       return $booking;
     }, 3);
     return response()->json(['data' => $booking->load(['rentalPrice.brand', 'rentalPrice.model', 'extraItems'])], 201);
+  }
+
+  /** Opens a dated availability report: customer/base or one customer's company-specific prices only. */
+  public function availabilityReport(Request $request): \Illuminate\Http\Response
+  {
+    $data = $request->validate([
+      'client_type' => ['required', 'in:customer,company'],
+      'customer_company_id' => ['required_if:client_type,company', 'nullable', 'integer', 'exists:customer_companies,id'],
+      'start_date' => ['required', 'date_format:Y-m-d'],
+      'start_time' => ['required', 'date_format:H:i'],
+      'end_date' => ['required', 'date_format:Y-m-d'],
+      'end_time' => ['required', 'date_format:H:i'],
+    ]);
+    if ($data['client_type'] === 'company') {
+      $this->ensureEligibleClient($data);
+    }
+    [$start, $end, $days] = $this->duration($data);
+    $companyName = null;
+    if ($data['client_type'] === 'company') {
+      $c = CustomerCompany::findOrFail($data['customer_company_id']);
+      $companyName = $c->company_name ?? $c->name ?? ('Company #' . $c->id);
+    }
+    $rows = collect();
+    $seen = [];
+    foreach ($this->matchingPrices($data)->orderByDesc('id')->get() as $price) {
+      $day = $this->rate($price, $start, $end, $days);
+      if ($day === null) continue;
+      foreach ($this->availableVehicles($price, $start, $end) as $car) {
+        if (isset($seen[$car->id])) continue;
+        $seen[$car->id] = true;
+        $car->loadMissing(['brand:id,name', 'model:id,name', 'company:id,name', 'branch:id,name']);
+        $rows->push([
+          'number' => $car->number,
+          'brand' => $car->brand?->name ?? '-',
+          'model' => $car->model?->name ?? '-',
+          'year' => $car->model_year,
+          'owner' => $car->company?->name ?? '-',
+          'location' => $car->branch?->name ?: ($car->current_location ?: 'Unknown'),
+          'day_price' => $day
+        ]);
+      }
+    }
+    $groups = $rows->sortBy('number')->groupBy('location')->sortKeys();
+    if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) abort(500, 'Install barryvdh/laravel-dompdf.');
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('rent.booking-available-cars-report', [
+      'groups' => $groups,
+      'total' => $rows->count(),
+      'days' => $days,
+      'start' => $start,
+      'end' => $end,
+      'companyName' => $companyName,
+      'clientType' => $data['client_type'],
+      'currency' => $this->settings()['currency'],
+    ])->setPaper('a4', 'landscape');
+    return $pdf->stream('booking-available-cars.pdf');
   }
   public function index(Request $r): JsonResponse
   {
