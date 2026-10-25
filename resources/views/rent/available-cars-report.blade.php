@@ -5,108 +5,154 @@
     <meta charset="utf-8">
     <style>
         @page {
-            margin: 32px 32px 38px;
+            margin: 26px 26px 32px;
         }
 
         body {
             font-family: DejaVu Sans, sans-serif;
-            color: #24324a;
-            font-size: 11px
+            color: #252525;
+            font-size: 11px;
         }
 
-        .heading {
+        .header {
             width: 100%;
-            margin-bottom: 20px
+            border-collapse: collapse;
+            margin-bottom: 22px;
         }
 
-        .heading td {
+        .header td {
+            vertical-align: top;
             border: 0;
-            vertical-align: middle
         }
 
         .logo {
-            max-height: 58px;
-            max-width: 160px
+            max-height: 62px;
+            max-width: 170px;
+        }
+
+        .company-name {
+            text-align: right;
+            font-size: 13px;
+            font-weight: bold;
+            padding-top: 15px;
         }
 
         h1 {
+            font-size: 19px;
             text-align: center;
-            font-size: 18px;
-            margin: 15px 0 5px
+            margin: 16px 0 15px;
         }
 
-        .meta {
+        .branch-title {
             text-align: center;
-            color: #65758d;
-            margin-bottom: 18px
-        }
-
-        .group {
+            font-size: 14px;
             font-weight: bold;
-            font-size: 13px;
-            margin: 16px 0 8px
+            margin: 12px 0 16px;
         }
 
-        table.data {
+        .cars-table {
+            border-collapse: collapse;
             width: 100%;
-            border-collapse: collapse
+            table-layout: fixed;
         }
 
-        .data th {
-            background: #6d9ab8;
+        .cars-table th {
+            padding: 8px 7px;
+            text-align: center;
             color: white;
-            padding: 9px 6px;
-            text-align: left
+            background: #6f96ba;
+            font-size: 10px;
+            font-weight: normal;
         }
 
-        .data td {
-            padding: 8px 6px;
-            border-bottom: 1px solid #d7e0e8
+        .cars-table th:first-child {
+            border-top-left-radius: 7px;
         }
 
-        .total {
-            text-align: right;
-            margin-top: 13px;
-            color: #52657a
+        .cars-table th:last-child {
+            border-top-right-radius: 7px;
         }
 
-        .small {
-            color: #8490a0
+        .cars-table td {
+            padding: 3px 2px;
+            text-align: center;
+            border: 0;
+        }
+
+        .cell-box {
+            border: 2px solid #b7b7b7;
+            padding: 6px 5px;
+            height: 15px;
+            text-align: center;
+        }
+
+        .cars-table td:first-child .cell-box {
+            border-right: 0;
+            border-radius: 6px 0 0 6px;
+        }
+
+        .cars-table td:not(:first-child):not(:last-child) .cell-box {
+            border-left: 0;
+            border-right: 0;
+        }
+
+        .cars-table td:last-child .cell-box {
+            border-left: 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 22px;
+            color: #777;
         }
     </style>
 </head>
 
 <body>
-    <table class="heading">
+    <table class="header">
         <tr>
-            <td style="width:35%">@if($logoData)<img class="logo" src="{{ $logoData }}" alt="Logo">@endif</td>
-            <td style="width:65%;text-align:right;font-size:14px;font-weight:bold">{{ $company->name }}</td>
+            <td style="width: 45%">@if($logoData)<img class="logo" src="{{ $logoData }}" alt="Company logo">@endif</td>
+            <td class="company-name" style="width: 55%">{{ $company->name }}</td>
         </tr>
     </table>
     <h1>Available Cars ({{ $vehicles->count() }})</h1>
-    <div class="meta">{{ $generatedAt->format('Y-m-d H:i') }} | {{ $branch?->name ?? 'All branches' }}</div>
-    <table class="data">
+    @php
+    $groups = $vehicles->groupBy(fn ($car) => $car->branch?->name ?? $car->current_location ?? 'Unassigned');
+    @endphp
+    @forelse($groups as $branchName => $cars)
+    <div class="branch-title">{{ $branchName }} ({{ $cars->count() }})</div>
+    <table class="cars-table">
         <thead>
             <tr>
                 <th>Vehicle Number</th>
-                <th>Vehicle Brand</th>
+                <th>Vehicle Name</th>
                 <th>Vehicle Model</th>
-                <th>Year</th>
-                <th>Branch</th>
+                <th>Company Name</th>
             </tr>
         </thead>
-        <tbody>@forelse($vehicles as $car)<tr>
-                <td>{{ $car->number }}</td>
-                <td>{{ $car->brand?->name }}</td>
-                <td>{{ $car->model?->name }}</td>
-                <td>{{ $car->model_year }}</td>
-                <td>{{ $car->branch?->name ?? $car->current_location }}</td>
+        <tbody>
+            @foreach($cars as $car)
+            <tr>
+                <td>
+                    <div class="cell-box">{{ $car->number }}</div>
+                </td>
+                <td>
+                    <div class="cell-box">{{ $car->model?->name ?? '—' }}</div>
+                </td>
+                <td>
+                    <div class="cell-box">{{ $car->model_year }}</div>
+                </td>
+                <td>
+                    <div class="cell-box">{{ $company->name }}</div>
+                </td>
             </tr>
-            @empty<tr>
-                <td colspan="5" style="text-align:center">No cars available at the time of this report.</td>
-            </tr>@endforelse</tbody>
+            @endforeach
+        </tbody>
     </table>
-    <div class="total">Total available vehicles: {{ $vehicles->count() }}</div>
+    @empty
+    <div class="empty">No cars available at the time of this report.</div>
+    @endforelse
 </body>
 
 </html>

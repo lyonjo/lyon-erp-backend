@@ -139,6 +139,6 @@ class AvailableCarsController extends Controller
             'generatedAt' => $this->now(),
             'logoData' => $this->companyLogoData($company),
         ])->setPaper('a4', 'portrait');
-        return $pdf->download('available-cars-' . $company->id . '-' . $this->now()->format('Ymd-His') . '.pdf');
+        return $pdf->stream('available-cars-' . $company->id . '-' . $this->now()->format('Ymd-His') . '.pdf');
     }
 }
