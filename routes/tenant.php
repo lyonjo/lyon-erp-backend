@@ -32,6 +32,7 @@ use App\Http\Controllers\Rent\BookingRentController;
 use App\Http\Controllers\Rent\CarReservationController;
 use App\Http\Controllers\Rent\AvailableCarsController;
 use App\Http\Controllers\Rent\CarExpectedBackController;
+use App\Http\Controllers\Rent\BookingDocumentController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -163,6 +164,10 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/available-cars', [AvailableCarsController::class, 'index']);
                 Route::put('/available-cars/{vehicle}/transfer', [AvailableCarsController::class, 'transfer']);
                 Route::get('/cars-expected-back/report', [CarExpectedBackController::class, 'report']);
+                Route::get('/bookings/{booking}/documents', [BookingDocumentController::class, 'index']);
+                Route::get('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'show']);
+                Route::post('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'store']);
+                Route::delete('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'destroy']);
             });
         });
     });
