@@ -30,6 +30,7 @@ use App\Http\Controllers\Rent\SettingsController as RentSettings;
 use App\Http\Controllers\Rent\ExtraItemController;
 use App\Http\Controllers\Rent\BookingRentController;
 use App\Http\Controllers\Rent\CarReservationController;
+use App\Http\Controllers\Rent\AvailableCarsController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -155,6 +156,10 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/car-reservations/cars/{car}', [CarReservationController::class, 'assign']);
                 Route::put('/car-reservations/cars/{car}/{reservation}', [CarReservationController::class, 'update']);
                 Route::delete('/car-reservations/cars/{car}/{reservation}', [CarReservationController::class, 'destroy']);
+                Route::get('/available-cars/options', [AvailableCarsController::class, 'options']);
+                Route::get('/available-cars/report', [AvailableCarsController::class, 'report']);
+                Route::get('/available-cars', [AvailableCarsController::class, 'index']);
+                Route::put('/available-cars/{vehicle}/transfer', [AvailableCarsController::class, 'transfer']);
             });
         });
     });
