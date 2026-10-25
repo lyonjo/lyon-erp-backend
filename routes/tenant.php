@@ -33,6 +33,7 @@ use App\Http\Controllers\Rent\CarReservationController;
 use App\Http\Controllers\Rent\AvailableCarsController;
 use App\Http\Controllers\Rent\CarExpectedBackController;
 use App\Http\Controllers\Rent\BookingDocumentController;
+use App\Http\Controllers\Rent\BookingRelayController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -167,6 +168,8 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/bookings/{booking}/documents', [BookingDocumentController::class, 'index']);
                 Route::get('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'show']);
                 Route::post('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'store']);
+                Route::get('/bookings/{booking}/relay', [BookingRelayController::class, 'show']);
+                Route::post('/bookings/{booking}/relay', [BookingRelayController::class, 'store']);
             });
         });
     });
