@@ -167,7 +167,6 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/bookings/{booking}/documents', [BookingDocumentController::class, 'index']);
                 Route::get('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'show']);
                 Route::post('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'store']);
-                Route::delete('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'destroy']);
             });
         });
     });
