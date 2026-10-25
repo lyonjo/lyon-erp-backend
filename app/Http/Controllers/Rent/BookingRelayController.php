@@ -14,7 +14,7 @@ class BookingRelayController extends Controller
 {
     public function show(Booking $booking): JsonResponse
     {
-        $booking->load(['customer', 'customerCompany', 'car.brand', 'car.model', 'company', 'rentalPrice.brand', 'rentalPrice.model', 'extraItems', 'reservation']);
+        $booking->load(['customer.details', 'customerCompany', 'car.brand', 'car.model', 'company', 'rentalPrice.brand', 'rentalPrice.model', 'extraItems', 'reservation']);
         if ($booking->service !== 'rent') abort(422, 'Only rental bookings can be relayed.');
         // Normalise the customer profile once on the server. The customer profile
         // API and the relay UI historically used different property names.
@@ -26,7 +26,7 @@ class BookingRelayController extends Controller
             'booking' => $booking,
             'customer' => $profile,
             'customer_details' => $details,
-            'customer_license' => $booking->customer?->license ?? $booking->customer?->driverLicense ?? null,
+            'customer_license' => null,
             'extra_items' => ExtraItem::orderBy('name')->get(['id', 'name', 'price', 'is_daily']),
             'currency' => $currency,
             'contract_exists' => RentalContract::where('booking_id', $booking->id)->exists(),
@@ -35,55 +35,40 @@ class BookingRelayController extends Controller
 
 
     /**
-     * Expose the identity/passport and driving-licence information under stable
-     * names. These attributes belong to the Customer record, not Booking.
-     * Variants here cover both older tenant schemas and newer Customer forms.
+     * The identity and license columns belong to customer_details, not customers.
+     * Read them through Customer::details() to match the existing customer profile.
      */
     private function relayCustomerDetails($profile): array
     {
         if (!$profile) return [];
 
-        $record = $profile->toArray();
-        $raw = $profile->getAttributes();
-        $sources = array_merge($record, $raw);
-        foreach (['passport', 'identity', 'national_id', 'id_details', 'driver_license', 'license', 'driving_license'] as $relation) {
-            if (isset($record[$relation]) && is_array($record[$relation])) {
-                foreach ($record[$relation] as $key => $value) {
-                    if (!is_array($value)) $sources[$relation . '_' . $key] = $value;
-                }
-            }
-        }
-        // Case and underscore-insensitive match; do not confuse ID/passport
-        // fields with unrelated database primary keys.
-        $normalized = [];
-        foreach ($sources as $key => $value) {
-            if (is_scalar($value) && $value !== '' && $value !== null) {
-                $normalized[strtolower(preg_replace('/[^a-z0-9]/i', '', (string)$key))] = $value;
-            }
-        }
-        $get = static function (array $names) use ($normalized) {
-            foreach ($names as $name) {
-                $key = strtolower(preg_replace('/[^a-z0-9]/i', '', $name));
-                if (isset($normalized[$key])) return $normalized[$key];
-            }
-            return null;
+        $details = $profile instanceof \App\Models\Rent\Customer
+            ? $profile->details
+            : null;
+
+        $formatDate = static function ($value): ?string {
+            if ($value === null || $value === '') return null;
+            if ($value instanceof \DateTimeInterface) return $value->format('Y-m-d');
+            return substr((string) $value, 0, 10);
         };
+
         return [
-            'name' => $get(['name', 'customer_name', 'full_name', 'company_name']),
-            'email' => $get(['email', 'email_address']),
-            'phone' => $get(['phone', 'phone_number', 'mobile', 'mobile_number', 'telephone']),
-            'nationality' => $get(['nationality', 'nationality_name', 'country', 'country_name', 'passport_nationality']),
-            'address' => $get(['address', 'customer_address', 'location']),
-            'id_number' => $get(['passport_number', 'passport_no', 'id_number', 'identity_number', 'national_id', 'id_no', 'passport_id_number', 'personal_id_number']),
-            'id_issue_date' => $get(['passport_issue_date', 'passport_date_of_issue', 'passport_issued_at', 'passport_issued_date', 'id_issue_date', 'id_date_of_issue', 'identity_issue_date', 'date_of_issue', 'passport_date_issue']),
-            'id_expiry_date' => $get(['passport_expiry_date', 'passport_expiration_date', 'passport_date_of_expiry', 'passport_expire_date', 'passport_expiry', 'id_expiry_date', 'id_expiration_date', 'identity_expiry_date', 'expiry_date', 'passport_end_date']),
-            'id_issue_place' => $get(['passport_issue_place', 'passport_place_of_issue', 'passport_issued_place', 'id_place_of_issue', 'id_issue_place', 'identity_issue_place', 'place_of_issue']),
-            'date_of_birth' => $get(['date_of_birth', 'birth_date', 'dob', 'birthday', 'birthdate']),
-            'place_of_birth' => $get(['place_of_birth', 'birth_place', 'birthplace']),
-            'license_number' => $get(['license_number', 'license_no', 'driver_license_number', 'driving_license_number', 'driving_license_no', 'driver_license_no']),
-            'license_issue_date' => $get(['license_issue_date', 'license_date_of_issue', 'driving_license_issue_date', 'driver_license_issue_date', 'driving_license_date_of_issue', 'license_issued_at']),
-            'license_expiry_date' => $get(['license_expiry_date', 'license_expiration_date', 'license_date_of_expiry', 'driving_license_expiry_date', 'driver_license_expiry_date', 'driving_license_expiration_date']),
-            'license_issue_place' => $get(['license_issue_place', 'license_place_of_issue', 'driving_license_issue_place', 'driver_license_place_of_issue', 'license_issued_place']),
+            'name' => $profile->name ?? $profile->supplier_name ?? $profile->company_name ?? null,
+            'email' => $profile->email ?? null,
+            'phone' => $profile->phone_number ?? $profile->phone ?? null,
+            'nationality' => $details?->nationality,
+            'address' => $profile->address ?? null,
+            // Neither supplied model defines an ID/passport number column.
+            'id_number' => null,
+            'id_issue_date' => $formatDate($details?->passport_date_of_issue),
+            'id_expiry_date' => $formatDate($details?->passport_date_of_expire),
+            'id_issue_place' => $details?->passport_place_of_issue,
+            'date_of_birth' => $formatDate($details?->date_of_birth),
+            'place_of_birth' => $details?->place_of_birth,
+            'license_number' => $details?->license_no,
+            'license_issue_date' => $formatDate($details?->license_date_of_issue),
+            'license_expiry_date' => $formatDate($details?->license_date_of_expire),
+            'license_issue_place' => $details?->license_place_of_issue,
         ];
     }
 
