@@ -37,6 +37,7 @@ use App\Http\Controllers\Rent\BookingRelayController;
 use App\Http\Controllers\Rent\RentalContractManagementController;
 use App\Http\Controllers\Rent\RentalContractVideoController;
 use App\Http\Controllers\Rent\RentalContractTermsController;
+use App\Http\Controllers\Rent\PaymentManagementController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -182,6 +183,12 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/rental-contracts/{contract}/videos/{video}', [RentalContractVideoController::class, 'show']);
                 Route::get('/terms-and-conditions', [RentalContractTermsController::class, 'show']);
                 Route::put('/terms-and-conditions', [RentalContractTermsController::class, 'update']);
+                Route::get('/payments', [PaymentManagementController::class, 'index']);
+                Route::post('/payments', [PaymentManagementController::class, 'store']);
+                Route::get('/payments/lookup', [PaymentManagementController::class, 'lookup']);
+                Route::get('/payments/banks', [PaymentManagementController::class, 'banks']);
+                Route::get('/payments/customer-companies', [PaymentManagementController::class, 'customerCompanies']);
+                Route::get('/payments/{payment}', [PaymentManagementController::class, 'show']);
             });
         });
     });
