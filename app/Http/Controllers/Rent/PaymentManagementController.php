@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Rent;
 
 use App\Http\Controllers\Controller;
-use App\Models\Rent\{Bank, Booking, CustomerCompany, Payment, RentalContract, SoldCar};
+use App\Models\Rent\{Bank, Booking, Company, CustomerCompany, Payment, RentalContract, SoldCar};
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -35,6 +35,17 @@ class PaymentManagementController extends Controller
     public function show(Payment $payment): JsonResponse
     {
         return response()->json(['data' => $payment->load(['customer', 'customerCompany', 'bank'])]);
+    }
+
+
+    // Provides the filter lists for Payment Box and Daily Report (report generation is a later phase).
+    public function reportOptions(): JsonResponse
+    {
+        $companies = Company::query()->orderBy('name')->get(['id', 'name']);
+        $employees = Payment::query()->whereNotNull('user_id')
+            ->select('user_id', 'user_name')->distinct()->orderBy('user_name')->get()
+            ->map(fn($p) => ['id' => $p->user_id, 'name' => $p->user_name ?: ('User #' . $p->user_id)]);
+        return response()->json(['companies' => $companies, 'employees' => $employees]);
     }
 
     public function banks(Request $request): JsonResponse
@@ -132,7 +143,7 @@ class PaymentManagementController extends Controller
             'reference_id' => ['required', 'integer', 'min:1'],
             'date' => ['required', 'date_format:Y-m-d'],
             'payment_value' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
-            'payment_type' => ['required', 'in:cash,credit_card,check'],
+            'payment_type' => ['required', 'in:cash,credit_card,check,bank_transfer,smart_link,online'],
             'bank_id' => ['required', 'integer', 'exists:banks,id'],
             'is_bank_transferee' => ['sometimes', 'boolean'],
             'auth_number' => ['required_if:payment_type,credit_card', 'nullable', 'string', 'max:100'],

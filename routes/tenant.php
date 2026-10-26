@@ -188,6 +188,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/payments/lookup', [PaymentManagementController::class, 'lookup']);
                 Route::get('/payments/banks', [PaymentManagementController::class, 'banks']);
                 Route::get('/payments/customer-companies', [PaymentManagementController::class, 'customerCompanies']);
+                Route::get('/payments/report-options', [PaymentManagementController::class, 'reportOptions']);
                 Route::get('/payments/{payment}', [PaymentManagementController::class, 'show']);
             });
         });
