@@ -25,6 +25,7 @@ class PaymentManagementController extends Controller
                     ->orWhere('contract_id', 'like', "%{$search}%")
                     ->orWhere('booking_id', 'like', "%{$search}%")
                     ->orWhere('user_name', 'like', "%{$search}%")
+                    ->orWhere('sold_car_customer_name', 'like', "%{$search}%")
                     ->orWhereHas('customer', fn($c) => $c->where('name', 'like', "%{$search}%"))
                     ->orWhereHas('customerCompany', fn($c) => $c->where('name', 'like', "%{$search}%"));
             });
@@ -33,7 +34,7 @@ class PaymentManagementController extends Controller
         // Payment customer names on sold cars are not linked to Customer/CustomerCompany.
         $results->getCollection()->each(function ($payment) {
             if ($payment->payment_for === 'sold car') {
-                $payment->setAttribute('customer_name', $payment->sold_car_customer_name ?: null);
+                $payment->setAttribute('customer_name', $payment->sold_car_customer_name ?: Payment::query()->where('sold_car_id', $payment->sold_car_id)->where('payment_for', 'sold car')->whereNotNull('sold_car_customer_name')->where('sold_car_customer_name', '!=', '')->orderBy('id')->value('sold_car_customer_name'));
             }
         });
         return response()->json($results);
@@ -41,7 +42,11 @@ class PaymentManagementController extends Controller
 
     public function show(Payment $payment): JsonResponse
     {
-        return response()->json(['data' => $payment->load(['customer', 'customerCompany', 'bank'])]);
+        $payment->load(['customer', 'customerCompany', 'bank']);
+        if ($payment->payment_for === 'sold car') {
+            $payment->setAttribute('customer_name', $payment->sold_car_customer_name ?: Payment::query()->where('sold_car_id', $payment->sold_car_id)->where('payment_for', 'sold car')->whereNotNull('sold_car_customer_name')->where('sold_car_customer_name', '!=', '')->orderBy('id')->value('sold_car_customer_name'));
+        }
+        return response()->json(['data' => $payment]);
     }
 
 
@@ -227,5 +232,77 @@ class PaymentManagementController extends Controller
             ]);
             return response()->json(['data' => $row, 'remaining' => round($remaining - $value, 2)], 201);
         });
+    }
+    /** Immutable source of payment: never accept payment_for/reference_id in edits. */
+    private function paymentReference(Payment $payment): int
+    {
+        return match ($payment->payment_for) {
+            'contract' => (int) $payment->contract_id,
+            'booking' => (int) $payment->booking_id,
+            'company' => (int) $payment->customer_company_id,
+            'sold car' => (int) $payment->sold_car_id,
+            default => throw ValidationException::withMessages(['payment_for' => ['Unsupported payment purpose.']]),
+        };
+    }
+
+    public function update(Request $request, Payment $payment): JsonResponse
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d'],
+            'payment_value' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
+            'payment_type' => ['required', 'in:cash,credit_card,check,bank_transfer,smart_link,online'],
+            'bank_id' => ['required', 'integer', 'exists:banks,id'],
+            'is_bank_transferee' => ['sometimes', 'boolean'],
+            'auth_number' => ['required_if:payment_type,credit_card', 'nullable', 'string', 'max:100'],
+            'credit_card_number' => ['required_if:payment_type,credit_card', 'nullable', 'string', 'max:50'],
+            'check_bank' => ['required_if:payment_type,check', 'nullable', 'string', 'max:190'],
+            'check_no' => ['required_if:payment_type,check', 'nullable', 'string', 'max:100'],
+            'check_due_date' => ['required_if:payment_type,check', 'nullable', 'date_format:Y-m-d'],
+        ]);
+        return DB::transaction(function () use ($payment, $data) {
+            $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $type = $payment->payment_for;
+            $referenceId = $this->paymentReference($payment);
+            // Serialize financial edits on the source, preventing two concurrent edits from overpaying.
+            if ($type === 'sold car') SoldCar::query()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
+            if ($type === 'company') CustomerCompany::query()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
+            if ($type === 'booking') Booking::query()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
+            if ($type === 'contract') RentalContract::query()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
+            $base = $this->baseValues($type, $referenceId);
+            $allowedTotal = round(max(0, $base['total_value'] - $base['paid'] + (float) $payment->company_value), 2);
+            $newValue = round((float) $data['payment_value'], 2);
+            if ($newValue > $allowedTotal + 0.00001) {
+                throw ValidationException::withMessages(['payment_value' => ['Payment exceeds the remaining balance, including the current payment.']]);
+            }
+            $flag = self::BANK_FLAGS[$type];
+            $bank = Bank::query()->whereKey($data['bank_id'])->where($flag, true)->first();
+            if (!$bank) throw ValidationException::withMessages(['bank_id' => ['Bank is not enabled for this payment type.']]);
+            if ($base['company_id'] && (int) $bank->company_id !== (int) $base['company_id']) {
+                throw ValidationException::withMessages(['bank_id' => ['Bank does not belong to the source fleet company.']]);
+            }
+            $payment->update([
+                'date' => $data['date'],
+                'payment_value' => $newValue,
+                'company_value' => $newValue,
+                'payment_type' => $data['payment_type'],
+                'bank_id' => $bank->id,
+                'is_bank_transferee' => (bool)($data['is_bank_transferee'] ?? false),
+                'auth_number' => $data['payment_type'] === 'credit_card' ? ($data['auth_number'] ?? null) : null,
+                'credit_card_number' => $data['payment_type'] === 'credit_card' ? ($data['credit_card_number'] ?? null) : null,
+                'check_bank' => $data['payment_type'] === 'check' ? ($data['check_bank'] ?? null) : null,
+                'check_no' => $data['payment_type'] === 'check' ? ($data['check_no'] ?? null) : null,
+                'check_due_date' => $data['payment_type'] === 'check' ? ($data['check_due_date'] ?? null) : null,
+            ]);
+            return response()->json(['data' => $payment->fresh(['bank']), 'remaining' => round($allowedTotal - $newValue, 2)]);
+        });
+    }
+
+    public function destroy(Payment $payment): JsonResponse
+    {
+        DB::transaction(function () use ($payment) {
+            $row = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $row->delete();
+        });
+        return response()->json(['message' => 'Payment deleted successfully.']);
     }
 }

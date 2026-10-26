@@ -190,6 +190,8 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/payments/customer-companies', [PaymentManagementController::class, 'customerCompanies']);
                 Route::get('/payments/report-options', [PaymentManagementController::class, 'reportOptions']);
                 Route::get('/payments/{payment}', [PaymentManagementController::class, 'show']);
+                Route::put('/payments/{payment}', [PaymentManagementController::class, 'update']);
+                Route::delete('/payments/{payment}', [PaymentManagementController::class, 'destroy']);
             });
         });
     });
