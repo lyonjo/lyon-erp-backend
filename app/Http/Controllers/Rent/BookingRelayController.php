@@ -9,6 +9,7 @@ use App\Models\Rent\ContractAdditionalDriver;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class BookingRelayController extends Controller
 {
@@ -75,6 +76,8 @@ class BookingRelayController extends Controller
     public function store(Request $request, Booking $booking): JsonResponse
     {
         $data = $request->validate([
+            'end_date' => ['required', 'date_format:Y-m-d'],
+            'end_time' => ['required', 'date_format:H:i'],
             'extra_item_ids' => ['required', 'array'],
             'extra_item_ids.*' => ['integer', 'distinct', 'exists:extra_items,id'],
             'additional_driver' => ['nullable', 'array'],
@@ -98,12 +101,29 @@ class BookingRelayController extends Controller
             if (RentalContract::where('booking_id', $locked->id)->exists()) {
                 throw ValidationException::withMessages(['booking' => ['This booking already has a contract.']]);
             }
+            $start = Carbon::parse($locked->start_date . ' ' . $locked->start_time);
+            $end = Carbon::createFromFormat('!Y-m-d H:i', $data['end_date'] . ' ' . $data['end_time']);
+            if (!$end || $end->lessThanOrEqualTo($start)) {
+                throw ValidationException::withMessages(['end_date' => ['Drop-off must be later than pickup.']]);
+            }
+            $days = max(1, (int) ceil($start->diffInSeconds($end) / 86400));
+            $reservation = $locked->reservation()->lockForUpdate()->firstOrFail();
+            $overlap = DB::table('car_reservations')
+                ->join('bookings', 'bookings.id', '=', 'car_reservations.booking_id')
+                ->where('car_reservations.car_id', $locked->car_id)
+                ->where('car_reservations.id', '!=', $reservation->id)
+                ->where('bookings.status', '!=', 'rejected')
+                ->where('car_reservations.pickup_start_datetime', '<', $end->format('Y-m-d H:i:s'))
+                ->where('car_reservations.dropoff_end_datetime', '>', $start->format('Y-m-d H:i:s'))
+                ->exists();
+            if ($overlap) {
+                throw ValidationException::withMessages(['end_date' => ['This vehicle has another reservation in the selected period.']]);
+            }
             $car = Vehicle::whereKey($locked->car_id)->lockForUpdate()->firstOrFail();
             $items = ExtraItem::whereIn('id', $data['extra_item_ids'])->get();
             if ($items->count() !== count($data['extra_item_ids'])) {
                 throw ValidationException::withMessages(['extra_item_ids' => ['Invalid extra items.']]);
             }
-            $days = max(1, (int)$locked->total_days);
             $pivot = [];
             $extraCharge = 0.0;
             foreach ($items as $item) {
@@ -112,6 +132,9 @@ class BookingRelayController extends Controller
                 $pivot[$item->id] = ['unit_price' => $unit, 'is_daily' => (bool)$item->is_daily, 'line_total' => $line];
                 $extraCharge += $line;
             }
+            $locked->end_date = $data['end_date'];
+            $locked->end_time = $data['end_time'] . ':00';
+            $locked->total_days = $days;
             $locked->extraItems()->sync($pivot);
             $locked->extra_charge = round($extraCharge, 2);
             $locked->extra_company_charge = round($extraCharge, 2);
@@ -121,6 +144,8 @@ class BookingRelayController extends Controller
             $locked->is_relayed = true;
             $locked->relayed_date = now();
             $locked->save();
+            $reservation->dropoff_end_datetime = $end->format('Y-m-d H:i:s');
+            $reservation->save();
             $contract = RentalContract::create([
                 'booking_id' => $locked->id,
                 'km_out' => $car->current_km ?? 0,
