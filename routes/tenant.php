@@ -39,6 +39,7 @@ use App\Http\Controllers\Rent\RentalContractVideoController;
 use App\Http\Controllers\Rent\RentalContractTermsController;
 use App\Http\Controllers\Rent\PaymentManagementController;
 use App\Http\Controllers\Rent\PaymentReportController;
+use App\Http\Controllers\Rent\TrafficViolationController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -194,6 +195,14 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/payments/{payment}', [PaymentManagementController::class, 'show']);
                 Route::put('/payments/{payment}', [PaymentManagementController::class, 'update']);
                 Route::delete('/payments/{payment}', [PaymentManagementController::class, 'destroy']);
+                Route::get('/traffic-violations/vehicles', [TrafficViolationController::class, 'vehicles']);
+                Route::get('/traffic-violations/resolve', [TrafficViolationController::class, 'resolve']);
+                Route::get('/traffic-violations', [TrafficViolationController::class, 'index']);
+                Route::post('/traffic-violations', [TrafficViolationController::class, 'store']);
+                Route::get('/traffic-violations/{violation}', [TrafficViolationController::class, 'show']);
+                Route::put('/traffic-violations/{violation}', [TrafficViolationController::class, 'update']);
+                Route::delete('/traffic-violations/{violation}', [TrafficViolationController::class, 'destroy']);
+                Route::get('/traffic-violations/{violation}/image', [TrafficViolationController::class, 'image']);
             });
         });
     });
