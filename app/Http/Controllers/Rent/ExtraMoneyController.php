@@ -59,12 +59,26 @@ class ExtraMoneyController extends Controller
   public function vehicles(Request $req): JsonResponse
   {
     $a = $req->validate(['search' => 'nullable|string|max:100', 'include_id' => 'nullable|integer']);
-    $q = Vehicle::query()->with(['brand:id,name', 'model:id,name'])->where(function ($q) use ($a) {
-      $q->whereNotIn('vehicles.id', fn($s) => $s->select('vehicle_id')->from('sold_cars')->whereNotNull('vehicle_id'));
-      if (!empty($a['include_id'])) $q->orWhereKey((int)$a['include_id']);
-    });
-    if ($s = trim((string)($a['search'] ?? ''))) $q->where('number', 'like', "%$s%");
-    return response()->json(['data' => $q->orderBy('number')->limit(100)->get()->map(fn($v) => ['id' => $v->id, 'number' => $v->number, 'label' => trim($v->number . ' — ' . ($v->brand?->name ?? '') . ' ' . ($v->model?->name ?? ''))])]);
+    $includeId = (int)($a['include_id'] ?? 0);
+    $q = Vehicle::query()->with(['brand:id,name', 'model:id,name'])
+      ->where(function ($query) use ($includeId) {
+        $query->whereNotIn('vehicles.id', function ($sub) {
+          $sub->select('vehicle_id')->from('sold_cars')->whereNotNull('vehicle_id');
+        });
+        // Preserve the vehicle already linked to an existing record, even if sold later.
+        if ($includeId > 0) $query->orWhere('vehicles.id', $includeId);
+      });
+    $search = trim((string)($a['search'] ?? ''));
+    if ($search !== '') {
+      // The selector may send its formatted label: "1234567 — Tesla Model-S".
+      $numberSearch = trim(preg_split('/\s+[—–]\s+/u', $search, 2)[0]);
+      $q->where('vehicles.number', 'like', '%' . $numberSearch . '%');
+    }
+    return response()->json(['data' => $q->orderBy('number')->limit(100)->get()->map(fn($v) => [
+      'id' => $v->id,
+      'number' => $v->number,
+      'label' => trim($v->number . ' — ' . ($v->brand?->name ?? '') . ' ' . ($v->model?->name ?? '')),
+    ])]);
   }
   private function bookingAt(int $car, string $date, string $time): ?Booking
   {
