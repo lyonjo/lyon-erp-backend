@@ -15,7 +15,7 @@ class BookingRelayController extends Controller
 {
     public function show(Booking $booking): JsonResponse
     {
-        $booking->load(['customer.details', 'customerCompany', 'car.brand', 'car.model', 'company', 'rentalPrice.brand', 'rentalPrice.model', 'extraItems', 'reservation']);
+        $booking->load(['customer.details', 'customerCompany', 'car.brand', 'car.model', 'company', 'rentalPrice.brand', 'rentalPrice.model', 'rentalPrice.periods.intervals', 'extraItems', 'reservation']);
         if ($booking->service !== 'rent') abort(422, 'Only rental bookings can be relayed.');
         // Normalise the customer profile once on the server. The customer profile
         // API and the relay UI historically used different property names.
@@ -107,6 +107,33 @@ class BookingRelayController extends Controller
                 throw ValidationException::withMessages(['end_date' => ['Drop-off must be later than pickup.']]);
             }
             $days = max(1, (int) ceil($start->diffInSeconds($end) / 86400));
+            if ($days > 365) {
+                throw ValidationException::withMessages(['end_date' => ['Rental must be 1–365 billed days.']]);
+            }
+            // Use the same pricing-period/day-interval rules as BookingRentController.
+            // Never allow extending a reservation into dates not covered by this booking's own price record.
+            $pricing = $locked->rentalPrice()->first();
+            if (!$pricing) {
+                throw ValidationException::withMessages(['end_date' => ['This booking has no rental pricing record.']]);
+            }
+            $period = $pricing->periods()
+                ->whereDate('start_date', '<=', $start->toDateString())
+                ->whereDate('end_date', '>=', $end->toDateString())
+                ->orderByDesc('id')->first();
+            if (!$period) {
+                throw ValidationException::withMessages(['end_date' => ['The selected drop-off is outside the rental pricing period.']]);
+            }
+            $interval = $period->intervals()
+                ->where('start', '<=', $days)
+                ->where('end', '>=', $days)
+                ->orderByDesc('id')->first();
+            if (!$interval) {
+                throw ValidationException::withMessages(['end_date' => ['The rental pricing record has no rate for this number of days.']]);
+            }
+            $dailyRate = (float) $interval->price;
+            // A company-price booking uses that exact company-specific pricing record.
+            // The current schema has no second independent fleet-company cost rate.
+            $companyDailyRate = $dailyRate;
             $reservation = $locked->reservation()->lockForUpdate()->firstOrFail();
             $overlap = DB::table('car_reservations')
                 ->join('bookings', 'bookings.id', '=', 'car_reservations.booking_id')
@@ -135,6 +162,8 @@ class BookingRelayController extends Controller
             $locked->end_date = $data['end_date'];
             $locked->end_time = $data['end_time'] . ':00';
             $locked->total_days = $days;
+            $locked->day_price = $dailyRate;
+            $locked->day_company_price = $companyDailyRate;
             $locked->extraItems()->sync($pivot);
             $locked->extra_charge = round($extraCharge, 2);
             $locked->extra_company_charge = round($extraCharge, 2);
