@@ -36,6 +36,7 @@ use App\Http\Controllers\Rent\BookingDocumentController;
 use App\Http\Controllers\Rent\BookingRelayController;
 use App\Http\Controllers\Rent\RentalContractManagementController;
 use App\Http\Controllers\Rent\RentalContractVideoController;
+use App\Http\Controllers\Rent\RentalContractTermsController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -179,6 +180,8 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/rental-contracts/{contract}/videos', [RentalContractVideoController::class, 'index']);
                 Route::post('/rental-contracts/{contract}/videos', [RentalContractVideoController::class, 'store']);
                 Route::get('/rental-contracts/{contract}/videos/{video}', [RentalContractVideoController::class, 'show']);
+                Route::get('/terms-and-conditions', [RentalContractTermsController::class, 'show']);
+                Route::put('/terms-and-conditions', [RentalContractTermsController::class, 'update']);
             });
         });
     });
