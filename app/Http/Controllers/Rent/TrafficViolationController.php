@@ -59,7 +59,14 @@ class TrafficViolationController extends Controller
     public function vehicles(Request $request): JsonResponse
     {
         $data = $request->validate(['search' => 'nullable|string|max:120']);
-        $q = Vehicle::query()->with(['brand:id,name', 'model:id,name'])->select(['id', 'number', 'brand_id', 'model_id', 'model_year']);
+        // Sold vehicles must not be selectable when adding or editing a violation.
+        // The sold_cars table references vehicles through vehicle_id.
+        $q = Vehicle::query()
+            ->whereNotIn('vehicles.id', function ($query) {
+                $query->select('vehicle_id')->from('sold_cars')->whereNotNull('vehicle_id');
+            })
+            ->with(['brand:id,name', 'model:id,name'])
+            ->select(['id', 'number', 'brand_id', 'model_id', 'model_year']);
         if ($term = trim((string)($data['search'] ?? ''))) $q->where('number', 'like', '%' . $term . '%');
         return response()->json(['data' => $q->orderBy('number')->limit(60)->get()->map(fn($v) => [
             'id' => $v->id,
