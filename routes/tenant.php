@@ -38,6 +38,7 @@ use App\Http\Controllers\Rent\RentalContractManagementController;
 use App\Http\Controllers\Rent\RentalContractVideoController;
 use App\Http\Controllers\Rent\RentalContractTermsController;
 use App\Http\Controllers\Rent\PaymentManagementController;
+use App\Http\Controllers\Rent\PaymentReportController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -192,6 +193,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/payments/{payment}', [PaymentManagementController::class, 'show']);
                 Route::put('/payments/{payment}', [PaymentManagementController::class, 'update']);
                 Route::delete('/payments/{payment}', [PaymentManagementController::class, 'destroy']);
+                Route::get('/payments/report', [PaymentReportController::class, 'pdf']);
             });
         });
     });
