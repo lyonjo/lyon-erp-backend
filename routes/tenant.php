@@ -40,6 +40,7 @@ use App\Http\Controllers\Rent\RentalContractTermsController;
 use App\Http\Controllers\Rent\PaymentManagementController;
 use App\Http\Controllers\Rent\PaymentReportController;
 use App\Http\Controllers\Rent\TrafficViolationController;
+use App\Http\Controllers\Rent\LawsuitController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -203,6 +204,13 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::put('/traffic-violations/{violation}', [TrafficViolationController::class, 'update']);
                 Route::delete('/traffic-violations/{violation}', [TrafficViolationController::class, 'destroy']);
                 Route::get('/traffic-violations/{violation}/image', [TrafficViolationController::class, 'image']);
+                Route::get('/lawsuits/options', [LawsuitController::class, 'options']);
+                Route::get('/lawsuits', [LawsuitController::class, 'index']);
+                Route::post('/lawsuits', [LawsuitController::class, 'store']);
+                Route::get('/lawsuits/{lawsuit}', [LawsuitController::class, 'show']);
+                Route::put('/lawsuits/{lawsuit}', [LawsuitController::class, 'update']);
+                Route::patch('/lawsuits/{lawsuit}/close', [LawsuitController::class, 'close']);
+                Route::delete('/lawsuits/{lawsuit}', [LawsuitController::class, 'destroy']);
             });
         });
     });
