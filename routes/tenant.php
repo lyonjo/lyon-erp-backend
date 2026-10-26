@@ -41,6 +41,8 @@ use App\Http\Controllers\Rent\PaymentManagementController;
 use App\Http\Controllers\Rent\PaymentReportController;
 use App\Http\Controllers\Rent\TrafficViolationController;
 use App\Http\Controllers\Rent\LawsuitController;
+use App\Http\Controllers\Rent\ExtraMoneyController;
+use App\Http\Controllers\Rent\ExtraMoneyServiceController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -211,6 +213,18 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::put('/lawsuits/{lawsuit}', [LawsuitController::class, 'update']);
                 Route::patch('/lawsuits/{lawsuit}/close', [LawsuitController::class, 'close']);
                 Route::delete('/lawsuits/{lawsuit}', [LawsuitController::class, 'destroy']);
+                Route::get('extra-money/vehicles', [ExtraMoneyController::class, 'vehicles']);
+                Route::get('extra-money/resolve', [ExtraMoneyController::class, 'resolve']);
+                Route::get('extra-money/{extraMoney}/image', [ExtraMoneyController::class, 'image']);
+                Route::get('extra-money', [ExtraMoneyController::class, 'index']);
+                Route::post('extra-money', [ExtraMoneyController::class, 'store']);
+                Route::get('extra-money/{extraMoney}', [ExtraMoneyController::class, 'show']);
+                Route::put('extra-money/{extraMoney}', [ExtraMoneyController::class, 'update']);
+                Route::delete('extra-money/{extraMoney}', [ExtraMoneyController::class, 'destroy']);
+                Route::get('extra-money-services', [ExtraMoneyServiceController::class, 'index']);
+                Route::post('extra-money-services', [ExtraMoneyServiceController::class, 'store']);
+                Route::put('extra-money-services/{service}', [ExtraMoneyServiceController::class, 'update']);
+                Route::delete('extra-money-services/{service}', [ExtraMoneyServiceController::class, 'destroy']);
             });
         });
     });
