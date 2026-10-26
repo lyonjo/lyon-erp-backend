@@ -29,7 +29,14 @@ class PaymentManagementController extends Controller
                     ->orWhereHas('customerCompany', fn($c) => $c->where('name', 'like', "%{$search}%"));
             });
         }
-        return response()->json($q->orderByDesc('id')->paginate((int)($data['per_page'] ?? 15)));
+        $results = $q->orderByDesc('id')->paginate((int)($data['per_page'] ?? 15));
+        // Payment customer names on sold cars are not linked to Customer/CustomerCompany.
+        $results->getCollection()->each(function ($payment) {
+            if ($payment->payment_for === 'sold car') {
+                $payment->setAttribute('customer_name', $payment->sold_car_customer_name ?: null);
+            }
+        });
+        return response()->json($results);
     }
 
     public function show(Payment $payment): JsonResponse
@@ -114,9 +121,17 @@ class PaymentManagementController extends Controller
         }
         if ($type === 'sold car') {
             $s = SoldCar::findOrFail($referenceId);
+            $existingName = Payment::query()
+                ->where('sold_car_id', $s->id)
+                ->where('payment_for', 'sold car')
+                ->whereNotNull('sold_car_customer_name')
+                ->where('sold_car_customer_name', '!=', '')
+                ->orderBy('id')
+                ->value('sold_car_customer_name');
             return [
                 'reference_id' => $s->id,
-                'name' => $s->buyer_name,
+                'name' => $existingName ?? '',
+                'name_locked' => $existingName !== null,
                 'total_value' => (float)$s->price,
                 'paid' => (float)Payment::where('sold_car_id', $s->id)->where('payment_for', 'sold car')->sum('company_value'),
                 'customer_id' => null,
@@ -141,6 +156,7 @@ class PaymentManagementController extends Controller
         $d = $request->validate([
             'payment_for' => ['required', 'in:contract,booking,company,sold car'],
             'reference_id' => ['required', 'integer', 'min:1'],
+            'sold_car_customer_name' => ['nullable', 'string', 'max:190'],
             'date' => ['required', 'date_format:Y-m-d'],
             'payment_value' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
             'payment_type' => ['required', 'in:cash,credit_card,check,bank_transfer,smart_link,online'],
@@ -153,7 +169,30 @@ class PaymentManagementController extends Controller
             'check_due_date' => ['required_if:payment_type,check', 'nullable', 'date_format:Y-m-d'],
         ]);
         return DB::transaction(function () use ($d, $request) {
+            // Serialize first-name establishment for the same sold car.
+            if ($d['payment_for'] === 'sold car') {
+                SoldCar::query()->whereKey((int)$d['reference_id'])->lockForUpdate()->firstOrFail();
+            }
             $base = $this->baseValues($d['payment_for'], (int)$d['reference_id']);
+            $soldCarCustomerName = null;
+            if ($d['payment_for'] === 'sold car') {
+                $requestedName = trim((string)($d['sold_car_customer_name'] ?? ''));
+                if (!empty($base['name_locked'])) {
+                    $soldCarCustomerName = $base['name'];
+                    if ($requestedName !== '' && $requestedName !== $soldCarCustomerName) {
+                        throw ValidationException::withMessages([
+                            'sold_car_customer_name' => ['The sold-car customer name is already established and cannot be changed by another payment.'],
+                        ]);
+                    }
+                } else {
+                    if ($requestedName === '') {
+                        throw ValidationException::withMessages([
+                            'sold_car_customer_name' => ['Enter the customer name for the first sold-car payment.'],
+                        ]);
+                    }
+                    $soldCarCustomerName = $requestedName;
+                }
+            }
             $flag = self::BANK_FLAGS[$d['payment_for']];
             $bank = Bank::query()->whereKey($d['bank_id'])->where($flag, true)->first();
             if (!$bank) throw ValidationException::withMessages(['bank_id' => ['Bank is not enabled for this payment type.']]);
@@ -169,6 +208,7 @@ class PaymentManagementController extends Controller
                 'customer_id' => $base['customer_id'],
                 'customer_company_id' => $base['customer_company_id'],
                 'sold_car_id' => $d['payment_for'] === 'sold car' ? $base['reference_id'] : null,
+                'sold_car_customer_name' => $soldCarCustomerName,
                 'lawsuit_id' => null,
                 'user_id' => $admin?->id,
                 'user_name' => $admin?->name ?? $admin?->email ?? 'Admin',

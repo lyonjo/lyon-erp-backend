@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Payment extends Model
 {
     protected $table = 'payments';
-    protected $fillable = ['contract_id', 'booking_id', 'user_id', 'user_name', 'customer_id', 'customer_company_id', 'lawsuit_id', 'sold_car_id', 'bank_id', 'payment_for', 'payment_type', 'is_bank_transferee', 'date', 'payment_value', 'company_value', 'check_bank', 'check_no', 'check_due_date', 'auth_number', 'credit_card_number'];
+    protected $fillable = ['contract_id', 'booking_id', 'user_id', 'user_name', 'customer_id', 'customer_company_id', 'lawsuit_id', 'sold_car_id', 'sold_car_customer_name', 'bank_id', 'payment_for', 'payment_type', 'is_bank_transferee', 'date', 'payment_value', 'company_value', 'check_bank', 'check_no', 'check_due_date', 'auth_number', 'credit_card_number'];
     protected $casts = ['date' => 'date:Y-m-d', 'check_due_date' => 'date:Y-m-d', 'payment_value' => 'decimal:2', 'company_value' => 'decimal:2', 'is_bank_transferee' => 'boolean'];
     public function booking(): BelongsTo
     {
