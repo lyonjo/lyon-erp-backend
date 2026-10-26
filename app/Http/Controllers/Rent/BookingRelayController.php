@@ -78,7 +78,7 @@ class BookingRelayController extends Controller
         $data = $request->validate([
             'end_date' => ['required', 'date_format:Y-m-d'],
             'end_time' => ['required', 'date_format:H:i'],
-            'extra_item_ids' => ['required', 'array'],
+            'extra_item_ids' => ['sometimes', 'array'],
             'extra_item_ids.*' => ['integer', 'distinct', 'exists:extra_items,id'],
             'additional_driver' => ['nullable', 'array'],
             'additional_driver.name' => ['nullable', 'string', 'max:190'],
@@ -147,8 +147,9 @@ class BookingRelayController extends Controller
                 throw ValidationException::withMessages(['end_date' => ['This vehicle has another reservation in the selected period.']]);
             }
             $car = Vehicle::whereKey($locked->car_id)->lockForUpdate()->firstOrFail();
-            $items = ExtraItem::whereIn('id', $data['extra_item_ids'])->get();
-            if ($items->count() !== count($data['extra_item_ids'])) {
+            $extraItemIds = $data['extra_item_ids'] ?? [];
+            $items = ExtraItem::whereIn('id', $extraItemIds)->get();
+            if ($items->count() !== count($extraItemIds)) {
                 throw ValidationException::withMessages(['extra_item_ids' => ['Invalid extra items.']]);
             }
             $pivot = [];
