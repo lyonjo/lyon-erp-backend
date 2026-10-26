@@ -138,6 +138,20 @@
             width: 10%
         }
 
+        .rtl-value {
+            direction: rtl;
+            unicode-bidi: embed;
+            text-align: center;
+            font-family: dejavusans, sans-serif;
+        }
+
+        .company-rtl {
+            direction: rtl;
+            unicode-bidi: embed;
+            text-align: right;
+            font-family: dejavusans, sans-serif;
+        }
+
         .total {
             text-align: right;
             margin-top: 14px;
@@ -159,7 +173,7 @@
     <table class="head">
         <tr>
             <td>@if($logoData)<img class="logo" src="{{ $logoData }}" alt="Company logo">@endif</td>
-            <td class="company">{{ $company->name }}</td>
+            <td class="company company-rtl" dir="rtl" lang="ar">{{ $company->name }}</td>
         </tr>
     </table>
     <div class="title">{{ $mode === 'daily' ? 'Daily Payments Report' : 'Payments Report' }} ({{ $rows->count() }})</div>
@@ -192,8 +206,8 @@
             <tr>
                 <td class="wid">{{ $payment->id }}</td>
                 <td class="wref">{{ $payment->reference }}</td>
-                <td class="wcustomer">{{ $payment->customer_name }}</td>
-                <td class="wuser">{{ $payment->user_name ?: ('User #' . $payment->user_id) }}</td>
+                <td class="wcustomer rtl-value" dir="rtl" lang="ar">{{ $payment->customer_name }}</td>
+                <td class="wuser rtl-value" dir="rtl" lang="ar">{{ $payment->user_name ?: ('User #' . $payment->user_id) }}</td>
                 <td class="wservice">{{ $payment->payment_for === 'sold car' ? 'Sold Car' : ucfirst($payment->payment_for) }}</td>
                 <td class="wdate">{{ substr((string)$payment->date,0,10) }}</td>
                 <td class="wmethod">{{ $payment->payment_type }}</td>

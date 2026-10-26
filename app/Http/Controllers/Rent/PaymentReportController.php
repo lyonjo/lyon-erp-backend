@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Rent;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rent\{Company, Payment};
-use Barryvdh\DomPDF\Facade\Pdf;
+use Mpdf\Mpdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -109,7 +109,7 @@ class PaymentReportController extends Controller
             }
         }
 
-        $pdf = Pdf::loadView('rent.payment-report', [
+        $html = view('rent.payment-report', [
             'company' => $company,
             'rows' => $rows,
             'logoData' => $logoData,
@@ -118,8 +118,29 @@ class PaymentReportController extends Controller
             'employee' => $employee,
             'mode' => $data['mode'],
             'total' => $rows->sum('payment_value'),
-        ])->setPaper('a4', 'landscape');
+        ])->render();
 
-        return $pdf->stream('payments-' . $company->id . '-' . $from . '-' . $to . '.pdf');
+        // mPDF provides Arabic glyph shaping and bidirectional text layout.
+        // DomPDF's DejaVu Sans font alone does not guarantee correctly joined letters.
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4-L',
+            'default_font' => 'dejavusans',
+            'margin_left' => 9,
+            'margin_right' => 9,
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+            'tempDir' => storage_path('app'),
+        ]);
+        $mpdf->WriteHTML($html);
+        $filename = 'payments-' . $company->id . '-' . $from . '-' . $to . '.pdf';
+
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 }
