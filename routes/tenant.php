@@ -34,6 +34,8 @@ use App\Http\Controllers\Rent\AvailableCarsController;
 use App\Http\Controllers\Rent\CarExpectedBackController;
 use App\Http\Controllers\Rent\BookingDocumentController;
 use App\Http\Controllers\Rent\BookingRelayController;
+use App\Http\Controllers\Rent\RentalContractManagementController;
+use App\Http\Controllers\Rent\RentalContractVideoController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -170,6 +172,13 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/bookings/{booking}/documents/{type}', [BookingDocumentController::class, 'store']);
                 Route::get('/bookings/{booking}/relay', [BookingRelayController::class, 'show']);
                 Route::post('/bookings/{booking}/relay', [BookingRelayController::class, 'store']);
+                Route::get('/rental-contracts', [RentalContractManagementController::class, 'index']);
+                Route::get('/rental-contracts/{contract}', [RentalContractManagementController::class, 'show']);
+                Route::put('/rental-contracts/{contract}', [RentalContractManagementController::class, 'update']);
+                Route::post('/rental-contracts/{contract}/close', [RentalContractManagementController::class, 'close']);
+                Route::get('/rental-contracts/{contract}/videos', [RentalContractVideoController::class, 'index']);
+                Route::post('/rental-contracts/{contract}/videos', [RentalContractVideoController::class, 'store']);
+                Route::get('/rental-contracts/{contract}/videos/{video}', [RentalContractVideoController::class, 'show']);
             });
         });
     });
