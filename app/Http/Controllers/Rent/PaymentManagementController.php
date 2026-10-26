@@ -45,7 +45,7 @@ class PaymentManagementController extends Controller
         $payment->load(['customer', 'customerCompany', 'bank']);
         if ($payment->customer_company_id && in_array($payment->payment_for, ['contract', 'booking'], true)) {
             $summary = $this->companySummary((int)$payment->customer_company_id);
-            $row = collect($summary['rows'])->firstWhere('booking_id', (int)$payment->booking_id);
+            $row = collect($summary['rows'])->firstWhere('contract_id', (int)$payment->contract_id);
             $payment->setAttribute('editable_remaining', round(max(0, min(
                 $summary['remaining'],
                 (float)($row['remaining'] ?? 0)
@@ -86,33 +86,40 @@ class PaymentManagementController extends Controller
         return response()->json(['data' => $q->orderBy('name')->limit(100)->get()]);
     }
 
-    /** Every company booking is one receivable; a contract is another reference to that same booking. */
+    /** Company receivables consist ONLY of contracts belonging to that customer company.
+     *  Bookings that have no contract are deliberately excluded.
+     */
     private function companyReceivables(int $companyId): array
     {
-        $bookings = Booking::query()->where('customer_company_id', $companyId)
-            ->whereNotIn('status', ['rejected'])
-            ->orderBy('start_date')->orderBy('id')->get(['id', 'company_total', 'start_date']);
-        $contracts = RentalContract::query()->whereIn('booking_id', $bookings->pluck('id'))
-            ->orderBy('id')->get(['id', 'booking_id'])->keyBy('booking_id');
+        $contracts = RentalContract::query()
+            ->whereHas('booking', fn($q) => $q->where('customer_company_id', $companyId))
+            ->with('booking:id,customer_company_id,company_total')
+            ->orderBy('id')
+            ->get(['id', 'booking_id']);
+
         $rows = [];
-        foreach ($bookings as $booking) {
-            $contract = $contracts->get($booking->id);
-            // Both booking and contract payments belong to the same receivable.
-            $paid = (float) Payment::query()->where('booking_id', $booking->id)
-                ->whereIn('payment_for', ['booking', 'contract'])->sum('company_value');
+        foreach ($contracts as $contract) {
+            $total = round((float) ($contract->booking?->company_total ?? 0), 2);
+            // Every company allocation is a contract payment with contract_id set.
+            $paid = round((float) Payment::query()
+                ->where('contract_id', $contract->id)
+                ->where('payment_for', 'contract')
+                ->sum('company_value'), 2);
             $rows[] = [
-                'booking_id' => (int)$booking->id,
-                'contract_id' => $contract ? (int)$contract->id : null,
-                'total' => round((float)$booking->company_total, 2),
-                'paid' => round($paid, 2),
-                'remaining' => round(max(0, (float)$booking->company_total - $paid), 2),
+                'contract_id' => (int) $contract->id,
+                'total' => $total,
+                'paid' => $paid,
+                'remaining' => round(max(0, $total - $paid), 2),
             ];
         }
-        // Existing legacy, unallocated company payments also reduce company-wide debt.
-        $unallocated = round((float) Payment::query()->where('customer_company_id', $companyId)
-            ->where('payment_for', 'company')->sum('company_value'), 2);
-        $legacyBalance = $unallocated;
+
+        // Preserve the effect of historical unallocated company payments.
+        $legacyBalance = round((float) Payment::query()
+            ->where('customer_company_id', $companyId)
+            ->where('payment_for', 'company')
+            ->sum('company_value'), 2);
         foreach ($rows as &$row) {
+            if ($legacyBalance <= 0) break;
             $offset = min($legacyBalance, $row['remaining']);
             $row['remaining'] = round($row['remaining'] - $offset, 2);
             $legacyBalance = round($legacyBalance - $offset, 2);
@@ -125,9 +132,15 @@ class PaymentManagementController extends Controller
     {
         $rows = $this->companyReceivables($companyId);
         $total = round(array_sum(array_column($rows, 'total')), 2);
-        $paid = round((float) Payment::query()->where('customer_company_id', $companyId)
-            ->whereIn('payment_for', ['booking', 'contract', 'company'])->sum('company_value'), 2);
-        return ['total' => $total, 'paid' => $paid, 'remaining' => round(max(0, $total - $paid), 2), 'rows' => $rows];
+        // Calculate paid amount from the contract balances, without counting
+        // standalone bookings or payments allocated to bookings without contracts.
+        $remaining = round(array_sum(array_column($rows, 'remaining')), 2);
+        return [
+            'total' => $total,
+            'paid' => round(max(0, $total - $remaining), 2),
+            'remaining' => $remaining,
+            'rows' => $rows,
+        ];
     }
 
     private function rejectCompanySource(Booking $booking): void
@@ -295,10 +308,9 @@ class PaymentManagementController extends Controller
                     if ($still < 0.005) break;
                     $portion = round(min($still, $receivable['remaining']), 2);
                     if ($portion <= 0) continue;
-                    $allocationType = $receivable['contract_id'] ? 'contract' : 'booking';
                     $created[] = Payment::create([
                         'contract_id' => $receivable['contract_id'],
-                        'booking_id' => $receivable['booking_id'],
+                        'booking_id' => null,
                         'customer_id' => null,
                         'customer_company_id' => $base['reference_id'],
                         'sold_car_id' => null,
@@ -307,7 +319,7 @@ class PaymentManagementController extends Controller
                         'user_id' => $admin?->id,
                         'user_name' => $admin?->name ?? $admin?->email ?? 'Admin',
                         'bank_id' => $bank->id,
-                        'payment_for' => $allocationType,
+                        'payment_for' => 'contract',
                         'payment_type' => $d['payment_type'],
                         'is_bank_transferee' => (bool)($d['is_bank_transferee'] ?? false),
                         'date' => $d['date'],
@@ -322,7 +334,7 @@ class PaymentManagementController extends Controller
                     $still = round($still - $portion, 2);
                 }
                 if ($still > 0.005) {
-                    throw ValidationException::withMessages(['payment_value' => ['Unable to allocate the full payment to outstanding company bookings.']]);
+                    throw ValidationException::withMessages(['payment_value' => ['Unable to allocate the full payment to outstanding company contracts.']]);
                 }
                 return response()->json([
                     'data' => $created,
@@ -391,11 +403,16 @@ class PaymentManagementController extends Controller
             if ($type === 'company') CustomerCompany::query()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
             if ($type === 'booking') Booking::query()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
             if ($type === 'contract') RentalContract::query()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
-            $isCompanyAllocation = $payment->customer_company_id !== null && in_array($type, ['contract', 'booking'], true);
+            if ($payment->customer_company_id !== null && $type === 'booking') {
+                throw ValidationException::withMessages(['payment_for' => [
+                    'Legacy company booking payments cannot be edited through this contracts-only workflow.',
+                ]]);
+            }
+            $isCompanyAllocation = $payment->customer_company_id !== null && $type === 'contract';
             if ($isCompanyAllocation) {
                 CustomerCompany::query()->whereKey((int)$payment->customer_company_id)->lockForUpdate()->firstOrFail();
                 $summary = $this->companySummary((int)$payment->customer_company_id);
-                $receivable = collect($summary['rows'])->firstWhere('booking_id', (int)$payment->booking_id);
+                $receivable = collect($summary['rows'])->firstWhere('contract_id', (int)$payment->contract_id);
                 $base = [
                     'total_value' => $receivable['total'] ?? 0,
                     'paid' => (float)(($receivable['total'] ?? 0) - ($receivable['remaining'] ?? 0)),
