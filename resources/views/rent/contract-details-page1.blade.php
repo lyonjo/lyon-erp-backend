@@ -153,7 +153,8 @@
             text-align: left;
             font-weight: bold;
             font-size: 9pt;
-            margin-top: 9pt;
+            margin-top: 20pt;
+            padding-top: 8pt;
             padding-left: 4pt;
             border: 0;
             background: transparent;
