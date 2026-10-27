@@ -44,6 +44,7 @@ use App\Http\Controllers\Rent\LawsuitController;
 use App\Http\Controllers\Rent\ExtraMoneyController;
 use App\Http\Controllers\Rent\ExtraMoneyServiceController;
 use App\Http\Controllers\Rent\{RefundController, DiscountController, GasolineController};
+use App\Http\Controllers\Rent\RentalContractInvoiceController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -181,6 +182,8 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::get('/bookings/{booking}/relay', [BookingRelayController::class, 'show']);
                 Route::post('/bookings/{booking}/relay', [BookingRelayController::class, 'store']);
                 Route::get('/rental-contracts', [RentalContractManagementController::class, 'index']);
+                Route::get('/rental-contracts/{contract}/invoice/pdf', [RentalContractInvoiceController::class, 'pdf'])
+                    ->whereNumber('contract');
                 Route::get('/rental-contracts/{contract}', [RentalContractManagementController::class, 'show']);
                 Route::put('/rental-contracts/{contract}', [RentalContractManagementController::class, 'update']);
                 Route::post('/rental-contracts/{contract}/close', [RentalContractManagementController::class, 'close']);
