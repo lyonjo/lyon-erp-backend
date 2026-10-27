@@ -30,11 +30,12 @@ class ExtraMoneyController extends Controller
       'has_croka' => (bool)$r->has_croka,
       'is_responsible' => $r->is_responsible,
       'croka_number' => $r->croka_number,
+      'croka_amount' => $r->croka_amount,
       'value' => $r->value,
       'note' => $r->note,
       'has_image' => $r->image !== null,
       'service_ids' => $r->services->pluck('id')->all(),
-      'services' => $r->services->map(fn($s) => ['id' => $s->id, 'name' => $s->name, 'price' => $s->pivot->price, 'has_lawsuit' => $s->has_lawsuit]),
+      'services' => $r->services->map(fn($s) => ['id' => $s->id, 'name' => $s->name, 'price' => $s->pivot->price, 'is_croka' => false]),
       'lawsuit_ids' => $r->lawsuits->pluck('id')->all()
     ];
   }
@@ -104,8 +105,10 @@ class ExtraMoneyController extends Controller
       'service_ids.*' => 'integer|distinct|exists:extra_money_services,id',
       'manual_customer_name' => 'nullable|string|max:190',
       'note' => 'nullable|string|max:4000',
+      'has_croka' => 'nullable|boolean',
       'is_responsible' => 'nullable|boolean',
       'croka_number' => 'nullable|string|max:100',
+      'croka_amount' => 'nullable|numeric|min:0|max:9999999',
       'image' => 'nullable|file|image|mimes:jpeg,jpg,png,webp|max:5120',
     ]);
   }
@@ -114,18 +117,21 @@ class ExtraMoneyController extends Controller
     $a = $this->valid($req);
     $ids = $a['service_ids'] ?? [];
     $services = ExtraMoneyService::whereIn('id', $ids)->get();
+    if ($services->contains(fn($svc) => mb_strtolower(trim($svc->name)) === 'croka')) throw ValidationException::withMessages(['service_ids' => ['Select the dedicated Croka option instead.']]);
     if ($services->count() !== count($ids)) throw ValidationException::withMessages(['service_ids' => ['Invalid service selection.']]);
-    $hasLawsuit = $services->contains(fn($s) => (bool)$s->has_lawsuit);
+    $hasCroka = (bool)($a['has_croka'] ?? false);
     $booking = $this->bookingAt((int)$a['car_id'], $a['date'], $a['time']);
     $contract = $booking ? RentalContract::where('booking_id', $booking->id)->first() : null;
-    if ($hasLawsuit && !$contract) throw ValidationException::withMessages(['service_ids' => ['Services requiring a lawsuit need a matching rental contract.']]);
-    if ($hasLawsuit && !array_key_exists('is_responsible', $a)) throw ValidationException::withMessages(['is_responsible' => ['Specify responsibility for an accident service.']]);
-    if ($hasLawsuit && empty(trim((string)($a['croka_number'] ?? '')))) throw ValidationException::withMessages(['croka_number' => ['Croka number is required for lawsuit services.']]);
+    // Croka is independent from the service catalog. A lawsuit is created only when a contract is linked.
+    if ($hasCroka && !array_key_exists('is_responsible', $a)) throw ValidationException::withMessages(['is_responsible' => ['Specify responsibility for an accident service.']]);
+    if ($hasCroka && empty(trim((string)($a['croka_number'] ?? '')))) throw ValidationException::withMessages(['croka_number' => ['Croka number is required for lawsuit services.']]);
     if (!$booking && empty(trim((string)($a['manual_customer_name'] ?? '')))) throw ValidationException::withMessages(['manual_customer_name' => ['Enter the customer name if no reservation matches.']]);
-    $value = round($services->sum(fn($s) => (float)$s->price), 2);
+    $crokaAmount = $hasCroka ? (float)($a['croka_amount'] ?? 0) : 0;
+    if ($hasCroka && !array_key_exists('croka_amount', $a)) throw ValidationException::withMessages(['croka_amount' => ['Enter the Croka amount.']]);
+    $value = round($services->sum(fn($s) => (float)$s->price) + $crokaAmount, 2);
     $newPath = $req->hasFile('image') ? $req->file('image')->store('extra-money', 'public') : null;
     try {
-      $result = DB::transaction(function () use ($existing, $a, $services, $booking, $contract, $value, $hasLawsuit, $newPath) {
+      $result = DB::transaction(function () use ($existing, $a, $services, $booking, $contract, $value, $hasCroka, $crokaAmount, $newPath) {
         $row = $existing ?: new ExtraMoney();
         $row->fill([
           'car_id' => $a['car_id'],
@@ -136,33 +142,37 @@ class ExtraMoneyController extends Controller
           'value' => $value,
           'note' => $a['note'] ?? null,
           'manual_customer_name' => $booking ? null : ($a['manual_customer_name'] ?? null),
-          'has_croka' => $hasLawsuit,
-          'is_responsible' => $hasLawsuit ? ($a['is_responsible'] ?? null) : null,
-          'croka_number' => $hasLawsuit ? ($a['croka_number'] ?? null) : null
+          'has_croka' => $hasCroka,
+          'croka_amount' => $crokaAmount,
+          'is_responsible' => $hasCroka ? ($a['is_responsible'] ?? null) : null,
+          'croka_number' => $hasCroka ? ($a['croka_number'] ?? null) : null
         ]);
         $row->save();
         $row->services()->sync($services->mapWithKeys(fn($s) => [$s->id => ['price' => $s->price]])->all());
-        // Keep one lawsuit per lawsuit-eligible service. Existing linked lawsuits are retained and may be edited in Lawsuits.
-        $wanted = $services->where('has_lawsuit', true)->values();
-        $linked = $row->lawsuits()->orderBy('id')->get();
-        foreach ($wanted as $i => $svc) {
-          if (isset($linked[$i])) continue;
-          Lawsuit::create([
-            'customer_id' => $booking?->customer_id,
-            'customer_company_id' => $booking?->customer_company_id,
-            'company_id' => $booking->company_id,
-            'contract_id' => $contract->id,
-            'extra_money_id' => $row->id,
-            'vehicle_number' => (string)Vehicle::find($a['car_id'])?->number,
-            'croka_number' => $a['croka_number'] ?? null,
-            'type' => 'customer',
-            'amount' => $svc->price,
-            'fees' => 0,
-            'date' => $a['date'],
-            'status' => 'open',
-            'customer_name' => $booking?->customer?->name ?? $booking?->customerCompany?->name,
-            'note' => 'Automatically created from Extra Money service: ' . $svc->name
-          ]);
+        // Croka creates a single associated lawsuit when the incident is linked to a rental contract.
+        // Never create lawsuits for ordinary services; never duplicate an existing lawsuit on update.
+        if ($hasCroka && $contract && $booking) {
+          $lawsuit = $row->lawsuits()->orderBy('id')->first();
+          if (!$lawsuit) {
+            Lawsuit::create([
+              'customer_id' => $booking->customer_id,
+              'customer_company_id' => $booking->customer_company_id,
+              'company_id' => $booking->company_id,
+              'contract_id' => $contract->id,
+              'extra_money_id' => $row->id,
+              'vehicle_number' => (string)Vehicle::find($a['car_id'])?->number,
+              'croka_number' => $a['croka_number'] ?? null,
+              'type' => 'customer',
+              'amount' => $crokaAmount,
+              'fees' => 0,
+              'date' => $a['date'],
+              'status' => 'open',
+              'customer_name' => $booking->customer?->name ?? $booking->customerCompany?->name,
+              'note' => 'Automatically created from Extra Money Croka'
+            ]);
+          } elseif ($lawsuit->status === 'open') {
+            $lawsuit->update(['croka_number' => $a['croka_number'] ?? null, 'amount' => $crokaAmount, 'date' => $a['date']]);
+          }
         }
         $old = $row->image?->path;
         if ($newPath) {

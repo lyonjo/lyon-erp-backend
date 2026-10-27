@@ -11,19 +11,23 @@ class ExtraMoneyServiceController extends Controller
 {
     public function index(Request $r): JsonResponse
     {
-        return response()->json(['data' => ExtraMoneyService::orderBy('name')->get()]);
+        return response()->json(['data' => ExtraMoneyService::whereRaw('LOWER(TRIM(name)) <> ?', ['croka'])->orderBy('name')->get()]);
     }
     private function valid(Request $r): array
     {
-        return $r->validate(['name' => 'required|string|max:190', 'price' => 'required|numeric|min:0|max:9999999', 'has_lawsuit' => 'required|boolean']);
+        return $r->validate(['name' => 'required|string|max:190', 'price' => 'required|numeric|min:0|max:9999999']);
     }
     public function store(Request $r): JsonResponse
     {
-        return response()->json(['data' => ExtraMoneyService::create($this->valid($r))], 201);
+        $data = $this->valid($r);
+        if (mb_strtolower(trim($data['name'])) === 'croka') throw ValidationException::withMessages(['name' => ['Croka is a built-in option on the Extra Money form.']]);
+        return response()->json(['data' => ExtraMoneyService::create($data)], 201);
     }
     public function update(Request $r, ExtraMoneyService $service): JsonResponse
     {
-        $service->update($this->valid($r));
+        $data = $this->valid($r);
+        if (mb_strtolower(trim($data['name'])) === 'croka') throw ValidationException::withMessages(['name' => ['Croka is a built-in option on the Extra Money form.']]);
+        $service->update($data);
         return response()->json(['data' => $service]);
     }
     public function destroy(ExtraMoneyService $service): JsonResponse
