@@ -49,7 +49,7 @@ class RentalContractDetailsPdfController extends Controller
 
         $days = max(1, (int) $booking->total_days);
         $dailyPrice = $money($booking->day_company_price);
-        $add('Rental Charge (' . $days . ' days × ' . number_format($dailyPrice, 2) . ' ' . $currency . ')', $days * $dailyPrice);
+        $add('Rental Charge', $days * $dailyPrice);
 
         // Use the booked pivot snapshot rather than today's Extra Item catalog prices.
         foreach ($booking->extraItems as $item) {
@@ -124,10 +124,10 @@ class RentalContractDetailsPdfController extends Controller
             'mode' => 'utf-8',
             'format' => 'A4',
             'default_font' => 'dejavusans',
-            'margin_left' => 10,
-            'margin_right' => 10,
-            'margin_top' => 10,
-            'margin_bottom' => 12,
+            'margin_left' => 8,
+            'margin_right' => 8,
+            'margin_top' => 5,
+            'margin_bottom' => 5,
             'autoScriptToLang' => true,
             'autoLangToFont' => true,
             'tempDir' => $tempDir,

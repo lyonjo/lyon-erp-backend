@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <style>
         @page {
-            margin: 10mm 8mm;
+            margin: 5mm 8mm;
         }
 
         body {
@@ -155,10 +155,13 @@
         }
 
         .signature {
-            text-align: center;
+            text-align: left;
             font-weight: bold;
             font-size: 9px;
-            margin-top: 9px;
+            margin-top: 6px;
+            padding-left: 4px;
+            border: 0;
+            background: transparent;
         }
     </style>
 </head>
@@ -306,10 +309,10 @@
                             <div class="terms-paragraph" dir="ltr">{{ $contractTerms->paragraph_en }}</div>
                             <div class="terms-paragraph" dir="rtl" style="text-align:right">{{ $contractTerms->paragraph_ar }}</div>
                             @else <div class="terms-paragraph">No terms have been configured.</div> @endif
-                            <div class="signature">Renter Name and Signature ...................................</div>
                         </td>
                     </tr>
                 </table>
+                <div class="signature">Renter Name and Signature ...................................</div>
             </td>
             <td class="gutter"></td>
             <td style="width:31%">
