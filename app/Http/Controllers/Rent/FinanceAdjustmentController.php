@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Carbon;
+use App\Models\User;
 
 abstract class FinanceAdjustmentController extends Controller
 {
@@ -35,13 +36,36 @@ abstract class FinanceAdjustmentController extends Controller
       if ($this->kind() === 'gasoline') $w->orWhereHas('car', fn($c) => $c->where('number', 'like', "%$s%"));
     });
     $rows = $q->orderByDesc('id')->paginate((int)($d['per_page'] ?? 15));
-    $rows->getCollection()->each(function ($r) {
-      $r->setAttribute('customer_name', $r->contract_id ? $this->context($r->contract)['customer_name'] : null);
+    $collection = $rows->getCollection();
+    $collection->each(function ($r) {
+      $r->setAttribute('customer_name', $r->contract_id && $r->contract ? $this->context($r->contract)['customer_name'] : null);
     });
+    if ($this->kind() === 'discount') {
+      $ids = [];
+      foreach ($collection as $row) {
+        if ($row->created_by) $ids[] = (int) $row->created_by;
+        foreach ((array) $row->approved_by as $approver) {
+          $id = is_array($approver) ? ($approver['id'] ?? null) : $approver;
+          if (is_numeric($id)) $ids[] = (int) $id;
+        }
+      }
+      $names = User::query()->whereIn('id', array_unique($ids))->pluck('name', 'id');
+      foreach ($collection as $row) {
+        $row->setAttribute('creator_name', $names[$row->created_by] ?? ($row->created_by ? '#' . $row->created_by : '—'));
+        $approvers = [];
+        foreach ((array) $row->approved_by as $approver) {
+          $uid = is_array($approver) ? ($approver['id'] ?? null) : $approver;
+          $stored = is_array($approver) ? ($approver['name'] ?? null) : null;
+          $approvers[] = $stored ?: ($names[$uid] ?? ($uid ? '#' . $uid : null));
+        }
+        $row->setAttribute('approver_names', array_values(array_filter($approvers)));
+      }
+    }
     return response()->json($rows);
   }
-  public function show(int $id)
+  public function show($id)
   {
+    if (!ctype_digit((string)$id)) abort(404);
     $r = ($this->model())::findOrFail($id);
     $r->setAttribute('customer_name', $r->contract_id ? $this->context($r->contract)['customer_name'] : null);
     return response()->json(['data' => $r]);
@@ -96,12 +120,14 @@ abstract class FinanceAdjustmentController extends Controller
   {
     return $this->save($r);
   }
-  public function update(Request $r, int $id)
+  public function update(Request $r, $id)
   {
+    if (!ctype_digit((string)$id)) abort(404);
     return $this->save($r, $id);
   }
-  public function destroy(int $id)
+  public function destroy($id)
   {
+    if (!ctype_digit((string)$id)) abort(404);
     return DB::transaction(function () use ($id) {
       $model = $this->model();
       $r = $model::lockForUpdate()->findOrFail($id);

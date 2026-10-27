@@ -226,6 +226,10 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('extra-money-services', [ExtraMoneyServiceController::class, 'store']);
                 Route::put('extra-money-services/{service}', [ExtraMoneyServiceController::class, 'update']);
                 Route::delete('extra-money-services/{service}', [ExtraMoneyServiceController::class, 'destroy']);
+                Route::get('/gasoline/vehicles', [GasolineController::class, 'vehicles']);
+                Route::get('/gasoline/resolve', [GasolineController::class, 'resolve']);
+                Route::post('/discounts/{id}/approve', [DiscountController::class, 'approve'])->whereNumber('id');
+
                 foreach (
                     [
                         'refunds' => RefundController::class,
@@ -236,13 +240,10 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                     Route::get("/$prefix/contracts", [$controller, 'contracts']);
                     Route::get("/$prefix", [$controller, 'index']);
                     Route::post("/$prefix", [$controller, 'store']);
-                    Route::get("/$prefix/{id}", [$controller, 'show']);
-                    Route::put("/$prefix/{id}", [$controller, 'update']);
-                    Route::delete("/$prefix/{id}", [$controller, 'destroy']);
+                    Route::get("/$prefix/{id}", [$controller, 'show'])->whereNumber('id');
+                    Route::put("/$prefix/{id}", [$controller, 'update'])->whereNumber('id');
+                    Route::delete("/$prefix/{id}", [$controller, 'destroy'])->whereNumber('id');
                 }
-                Route::post('/discounts/{id}/approve', [DiscountController::class, 'approve']);
-                Route::get('/gasoline/vehicles', [GasolineController::class, 'vehicles']);
-                Route::get('/gasoline/resolve', [GasolineController::class, 'resolve']);
             });
         });
     });
