@@ -10,6 +10,7 @@ class CustomerDetail extends Model
     protected $fillable = [
         'customer_id',
         'nationality',
+        'id_number',
         'place_of_birth',
         'date_of_birth',
         'passport_place_of_issue',
@@ -22,11 +23,11 @@ class CustomerDetail extends Model
     ];
 
     protected $casts = [
-        'date_of_birth'           => 'date',
-        'passport_date_of_issue'  => 'date',
+        'date_of_birth' => 'date',
+        'passport_date_of_issue' => 'date',
         'passport_date_of_expire' => 'date',
-        'license_date_of_issue'   => 'date',
-        'license_date_of_expire'  => 'date',
+        'license_date_of_issue' => 'date',
+        'license_date_of_expire' => 'date',
     ];
 
     public function customer(): BelongsTo
