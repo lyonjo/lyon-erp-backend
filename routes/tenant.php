@@ -45,6 +45,7 @@ use App\Http\Controllers\Rent\ExtraMoneyController;
 use App\Http\Controllers\Rent\ExtraMoneyServiceController;
 use App\Http\Controllers\Rent\{RefundController, DiscountController, GasolineController};
 use App\Http\Controllers\Rent\RentalContractInvoiceController;
+use App\Http\Controllers\Rent\RentalContractDetailsPdfController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -247,6 +248,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                     Route::put("/$prefix/{id}", [$controller, 'update'])->whereNumber('id');
                     Route::delete("/$prefix/{id}", [$controller, 'destroy'])->whereNumber('id');
                 }
+                Route::get('/rental-contracts/{contract}/details/pdf', [RentalContractDetailsPdfController::class, 'pdf'])->whereNumber('contract');
             });
         });
     });
