@@ -46,6 +46,7 @@ use App\Http\Controllers\Rent\ExtraMoneyServiceController;
 use App\Http\Controllers\Rent\{RefundController, DiscountController, GasolineController};
 use App\Http\Controllers\Rent\RentalContractInvoiceController;
 use App\Http\Controllers\Rent\RentalContractDetailsPdfController;
+use App\Http\Middleware\RequireCustomerFrontDocuments;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -65,8 +66,8 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
             Route::middleware(['module:rent', \App\Http\Middleware\NoCache::class])->prefix('rent')->group(function () {
                 Route::get('customers', [CustomerController::class, 'index']);
                 Route::get('/customers/{customer}', [CustomerController::class, 'show']);
-                Route::post('/customers', [CustomerController::class, 'store']);
-                Route::put('/customers/{customer}', [CustomerController::class, 'update']);
+                Route::post('/customers', [CustomerController::class, 'store'])->middleware(RequireCustomerFrontDocuments::class);
+                Route::put('/customers/{customer}', [CustomerController::class, 'update'])->middleware(RequireCustomerFrontDocuments::class);
                 Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
                 Route::get('/customer-companies', [CustomerCompanyController::class, 'index']);
                 Route::get('/customer-companies/{customerCompany}', [CustomerCompanyController::class, 'show']);
