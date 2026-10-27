@@ -4,14 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        @page {
-            margin: 5mm 8mm;
-        }
-
+        /* mPDF uses physical points: the earlier px-based layout rendered much too small on A4. */
         body {
             font-family: dejavusans, sans-serif;
-            font-size: 9px;
-            color: #333333;
+            font-size: 9.5pt;
+            color: #333;
             margin: 0;
             padding: 0;
         }
@@ -27,46 +24,46 @@
 
         .header {
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 13pt;
         }
 
         .logo {
-            height: 48px;
-            max-width: 200px;
+            height: 65px;
+            max-width: 210px;
         }
 
         .contract-title {
-            font-size: 15px;
+            font-size: 14pt;
             font-weight: bold;
-            margin: 5px 0 1px;
+            margin: 8pt 0 3pt;
         }
 
         .contract-sub {
-            font-size: 11px;
+            font-size: 10pt;
         }
 
         .section {
             border: 1px solid #d9dee6;
-            margin-bottom: 7px;
+            margin-bottom: 10pt;
             page-break-inside: avoid;
         }
 
         .section-heading {
             background-color: #3d85c6;
-            color: #ffffff;
-            font-size: 10px;
+            color: #fff;
+            font-size: 9.2pt;
             font-weight: bold;
-            padding: 7px 9px;
+            padding: 6pt 8pt;
         }
 
         .section-content {
-            background-color: #ffffff;
-            padding: 6px 8px;
+            background-color: #fff;
+            padding: 7pt 8pt;
         }
 
         .info td {
-            padding: 3px 5px;
-            font-size: 9px;
+            padding: 3.7pt 4pt;
+            font-size: 8.4pt;
             line-height: 1.35;
             border: 0;
         }
@@ -74,7 +71,7 @@
         .layout {
             table-layout: fixed;
             width: 100%;
-            margin-bottom: 7px;
+            margin-bottom: 10pt;
         }
 
         .layout>tbody>tr>td {
@@ -83,10 +80,9 @@
         }
 
         .layout .gutter {
-            width: 9px;
+            width: 10px;
         }
 
-        /* Full-width table-based heading cell: avoids mPDF shrinking div backgrounds to text width. */
         .panel {
             width: 100%;
             border: 1px solid #d9dee6;
@@ -96,32 +92,31 @@
 
         .panel .panel-head {
             background-color: #3d85c6;
-            color: #ffffff;
-            padding: 7px 8px;
+            color: #fff;
+            padding: 6pt 7pt;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 9pt;
             text-align: left;
         }
 
         .panel .panel-body {
-            background-color: #ffffff;
-            padding: 5px 7px;
+            background-color: #fff;
+            padding: 6pt 7pt;
         }
 
-        /* Never inherit content borders/underlines from HTML stored in terms. */
         .terms-paragraph {
-            background-color: #ffffff;
+            background: #fff;
             border: 0;
             text-decoration: none;
             font-weight: normal;
-            font-size: 8.4px;
-            line-height: 1.34;
-            margin: 0 0 7px;
+            font-size: 8.8pt;
+            line-height: 1.32;
+            margin: 0 0 7pt;
             padding: 0;
         }
 
         .terms-paragraph * {
-            background-color: transparent;
+            background: transparent;
             border: 0;
             text-decoration: none;
         }
@@ -129,37 +124,37 @@
         .money {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8.1px;
+            font-size: 8.15pt;
         }
 
         .money td {
-            padding: 3px 2px;
+            padding: 3.6pt 2pt;
             border: 0;
             vertical-align: top;
-            line-height: 1.35;
+            line-height: 1.32;
         }
 
         .money .money-label {
-            width: 62%;
+            width: 60%;
         }
 
         .money .money-num {
-            width: 38%;
+            width: 40%;
             text-align: right;
         }
 
         .money .sum td {
             border-top: 1px solid #d9dee6;
             font-weight: bold;
-            padding-top: 5px;
+            padding-top: 5pt;
         }
 
         .signature {
             text-align: left;
             font-weight: bold;
-            font-size: 9px;
-            margin-top: 6px;
-            padding-left: 4px;
+            font-size: 9pt;
+            margin-top: 9pt;
+            padding-left: 4pt;
             border: 0;
             background: transparent;
         }
@@ -176,7 +171,7 @@
 
     <div class="header">
         @if($logoSrc)<img class="logo" src="{{ $logoSrc }}" alt="Company logo">@endif
-        <div style="font-size:10px;font-weight:bold">{{ $company->name }}</div>
+        <div style="font-size:10pt;font-weight:bold">{{ $company->name }}</div>
         <div class="contract-title">Rental Car Contract / عقد تأجير سيارة</div>
         <div class="contract-sub">{{ strtoupper((string)$contract->status) }} &nbsp; | &nbsp; Contract #{{ $contract->id }}</div>
     </div>
