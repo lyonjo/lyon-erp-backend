@@ -17,7 +17,7 @@ class RentalContractInvoiceController extends Controller
         $contract->load([
             'booking.customer',
             'booking.customerCompany',
-            'booking.company',
+            'booking.company.logo',
             'booking.car.brand',
             'booking.car.model',
             'booking.extraItems',
@@ -27,9 +27,14 @@ class RentalContractInvoiceController extends Controller
         $company = $booking->company;
         abort_unless($company, 404, 'The booking company was not found.');
 
-        $currency = 'JOD';
-        if (Schema::hasTable('settings')) {
-            $currency = strtoupper((string) (DB::table('settings')->where('key', 'currency')->value('value') ?: 'JOD'));
+        // Currency is tenant-specific, managed in Rent > Settings.
+        // Tenancy middleware has already selected the current tenant database.
+        $configuredCurrency = Schema::hasTable('settings')
+            ? DB::table('settings')->where('key', 'currency')->value('value')
+            : null;
+        $currency = strtoupper(trim((string) ($configuredCurrency ?? '')));
+        if ($currency === '') {
+            $currency = 'JOD'; // Default only when no tenant currency has been configured.
         }
         $money = static fn($n): float => round((float) ($n ?? 0), 2);
         $rows = [];
@@ -99,7 +104,7 @@ class RentalContractInvoiceController extends Controller
         }
         $balance = round($totalBeforePayments - $paid, 2);
 
-        $logoSrc = $this->companyLogo($company->logo ?? null);
+        $logoSrc = $this->companyLogo($company);
         $html = view('rent.contract-invoice-pdf', compact(
             'contract',
             'booking',
@@ -140,20 +145,35 @@ class RentalContractInvoiceController extends Controller
         ]);
     }
 
-    private function companyLogo(?string $storedPath): ?string
+    private function companyLogo(\App\Models\Rent\Company $company): ?string
     {
-        if (!$storedPath) return null;
-        // Only read tenant-local files; never dereference a remote URL or an arbitrary absolute path.
-        $path = ltrim(str_replace('\\', '/', $storedPath), '/');
-        if (str_contains($path, '..') || str_contains($path, '://')) return null;
-        foreach (['public', 'local'] as $disk) {
-            if (!Storage::disk($disk)->exists($path)) continue;
-            $bytes = Storage::disk($disk)->get($path);
+        // Company logos are polymorphic images, not a `companies.logo` string column.
+        // The Image model stores the relative tenant file path in images.path.
+        $company->loadMissing('logo');
+        $storedPath = $company->logo?->path;
+        if (!is_string($storedPath) || trim($storedPath) === '') {
+            return null;
+        }
+
+        $path = ltrim(str_replace('\\', '/', trim($storedPath)), '/');
+        if (str_contains($path, '..') || str_contains($path, '://')) {
+            return null;
+        }
+
+        // Same tenant disk convention as the existing Available Cars PDF.
+        foreach (['public', 'local'] as $diskName) {
+            $disk = Storage::disk($diskName);
+            if (!$disk->exists($path)) {
+                continue;
+            }
+
+            $bytes = $disk->get($path);
             $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
             if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
                 return 'data:' . $mime . ';base64,' . base64_encode($bytes);
             }
         }
+
         return null;
     }
 }
