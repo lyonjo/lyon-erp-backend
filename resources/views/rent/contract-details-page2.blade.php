@@ -1,44 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
     <style>
+        @page {
+            margin: 8mm;
+        }
+
         body {
             font-family: dejavusans, sans-serif;
-            font-size: 10px;
-            color: #24374c
+            color: #333;
+            font-size: 9px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .title {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .title td {
+            width: 50%;
+            font-size: 17px;
+            font-weight: bold;
+            padding: 6px 0;
         }
 
         .clauses {
             width: 100%;
-            border-collapse: collapse
+            border-collapse: collapse;
+            table-layout: fixed;
         }
 
         .clauses td {
             width: 50%;
+            padding: 3px 9px;
             vertical-align: top;
-            padding: 7px 10px;
-            line-height: 1.6;
-            border-bottom: 1px solid #e9edf2
+            line-height: 1.3;
+            font-size: 8.7px;
+            font-weight: bold;
         }
 
-        .head {
-            font-size: 17px;
-            font-weight: bold;
-            border-bottom: 1px solid #25344b;
-            padding: 9px 0 12px
-        }
-
-        .number {
-            font-weight: bold;
-            color: #3d85c6
+        .clauses tr {
+            page-break-inside: avoid;
         }
     </style>
 </head>
 
 <body>
-    <table width="100%" class="head">
+    <table class="title">
         <tr>
             <td>Contract Terms</td>
             <td dir="rtl" style="text-align:right">شروط العقد</td>
@@ -47,12 +61,12 @@
     @if($contractTerms && $contractTerms->clauses->isNotEmpty())
     <table class="clauses">@foreach($contractTerms->clauses as $clause)
         <tr>
-            <td dir="ltr"><span class="number">{{ $loop->iteration }}.</span> {{ $clause->text_en }}</td>
-            <td dir="rtl" style="text-align:right"><span class="number">{{ $loop->iteration }}.</span> {{ $clause->text_ar }}</td>
+            <td dir="ltr">{{ $loop->iteration }} - {{ $clause->text_en }}</td>
+            <td dir="rtl" style="text-align:right">{{ $loop->iteration }} - {{ $clause->text_ar }}</td>
         </tr>
         @endforeach
     </table>
-    @else<p>No numbered clauses have been configured.</p>@endif
+    @else<p>No numbered contract clauses have been configured.</p>@endif
 </body>
 
 </html>
