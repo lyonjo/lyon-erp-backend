@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Rent;
 
 use App\Http\Controllers\Controller;
-use App\Models\Rent\{Bank, Booking, Company, CustomerCompany, Payment, RentalContract, SoldCar, TrafficViolation, ExtraMoney};
+use App\Models\Rent\{Bank, Booking, Company, CustomerCompany, Payment, RentalContract, SoldCar, TrafficViolation, ExtraMoney, Refund, Discount, Gasoline};
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -99,7 +99,7 @@ class PaymentManagementController extends Controller
 
         $rows = [];
         foreach ($contracts as $contract) {
-            $total = round((float) ($contract->booking?->company_total ?? 0) + (float) TrafficViolation::where('contract_id', $contract->id)->sum('violation_value') + (float) ExtraMoney::where('contract_id', $contract->id)->sum('value'), 2);
+            $total = round((float) ($contract->booking?->company_total ?? 0) + (float) TrafficViolation::where('contract_id', $contract->id)->sum('violation_value') + (float) ExtraMoney::where('contract_id', $contract->id)->sum('value') + (float) Refund::where('contract_id', $contract->id)->sum('amount') + (float) Gasoline::where('contract_id', $contract->id)->sum('amount') - (float) Discount::where('contract_id', $contract->id)->where('is_approved', true)->sum('amount'), 2);
             // Every company allocation is a contract payment with contract_id set.
             $paid = round((float) Payment::query()
                 ->where('contract_id', $contract->id)
@@ -159,7 +159,7 @@ class PaymentManagementController extends Controller
             $b = $contract->booking;
             if (!$b) throw ValidationException::withMessages(['reference_id' => ['Contract has no booking.']]);
             $this->rejectCompanySource($b);
-            $amount = (float)$b->company_total + (float)TrafficViolation::where('contract_id', $contract->id)->sum('violation_value') + (float)ExtraMoney::where('contract_id', $contract->id)->sum('value');
+            $amount = (float)$b->company_total + (float)TrafficViolation::where('contract_id', $contract->id)->sum('violation_value') + (float)ExtraMoney::where('contract_id', $contract->id)->sum('value') + (float)Refund::where('contract_id', $contract->id)->sum('amount') + (float)Gasoline::where('contract_id', $contract->id)->sum('amount') - (float)Discount::where('contract_id', $contract->id)->where('is_approved', true)->sum('amount');
             $query = Payment::where('contract_id', $contract->id)->where('payment_for', 'contract');
             return [
                 'reference_id' => $contract->id,

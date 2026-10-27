@@ -43,6 +43,7 @@ use App\Http\Controllers\Rent\TrafficViolationController;
 use App\Http\Controllers\Rent\LawsuitController;
 use App\Http\Controllers\Rent\ExtraMoneyController;
 use App\Http\Controllers\Rent\ExtraMoneyServiceController;
+use App\Http\Controllers\Rent\{RefundController, DiscountController, GasolineController};
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -225,6 +226,23 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('extra-money-services', [ExtraMoneyServiceController::class, 'store']);
                 Route::put('extra-money-services/{service}', [ExtraMoneyServiceController::class, 'update']);
                 Route::delete('extra-money-services/{service}', [ExtraMoneyServiceController::class, 'destroy']);
+                foreach (
+                    [
+                        'refunds' => RefundController::class,
+                        'discounts' => DiscountController::class,
+                        'gasoline' => GasolineController::class,
+                    ] as $prefix => $controller
+                ) {
+                    Route::get("/$prefix/contracts", [$controller, 'contracts']);
+                    Route::get("/$prefix", [$controller, 'index']);
+                    Route::post("/$prefix", [$controller, 'store']);
+                    Route::get("/$prefix/{id}", [$controller, 'show']);
+                    Route::put("/$prefix/{id}", [$controller, 'update']);
+                    Route::delete("/$prefix/{id}", [$controller, 'destroy']);
+                }
+                Route::post('/discounts/{id}/approve', [DiscountController::class, 'approve']);
+                Route::get('/gasoline/vehicles', [GasolineController::class, 'vehicles']);
+                Route::get('/gasoline/resolve', [GasolineController::class, 'resolve']);
             });
         });
     });
