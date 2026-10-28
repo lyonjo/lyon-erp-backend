@@ -48,14 +48,12 @@ class CustomerCompanyController extends Controller
             description: "Created customer company #{$company->id}",
             data: $company->toArray()
         );
-        return (new CustomerCompanyResource($company))
-            ->response()
-            ->setStatusCode(201);
+        return $this->companyResponse($company, 201);
     }
 
     public function show(CustomerCompany $customerCompany)
     {
-        return new CustomerCompanyResource($customerCompany);
+        return $this->companyResponse($customerCompany);
     }
 
     public function update(CustomerCompanyRequest $request, CustomerCompany $customerCompany)
@@ -68,7 +66,25 @@ class CustomerCompanyController extends Controller
             description: "Updated customer company #{$customerCompany->id}",
             data: $customerCompany->toArray()
         );
-        return new CustomerCompanyResource($customerCompany->fresh());
+        return $this->companyResponse($customerCompany->fresh());
+    }
+
+    /**
+     * Preserve the existing API resource shape and include admin_name even when
+     * the deployed CustomerCompanyResource has not yet been updated.
+     */
+    private function companyResponse(CustomerCompany $company, int $status = 200)
+    {
+        $response = (new CustomerCompanyResource($company))->response();
+        $payload = $response->getData(true);
+
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $payload['data']['admin_name'] = $company->admin_name;
+        } else {
+            $payload['admin_name'] = $company->admin_name;
+        }
+
+        return $response->setData($payload)->setStatusCode($status);
     }
 
     public function destroy(CustomerCompany $customerCompany)
