@@ -250,11 +250,10 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                     Route::put("/$prefix/{id}", [$controller, 'update'])->whereNumber('id');
                     Route::delete("/$prefix/{id}", [$controller, 'destroy'])->whereNumber('id');
                 }
-                Route::get('/rental-contracts/{contract}/details/pdf', [RentalContractDetailsPdfController::class, 'pdf'])->whereNumber('contract');
-                Route::get('rent/customer-companies/{customerCompany}/attachments', [CustomerCompanyAttachmentController::class, 'index']);
-                Route::post('rent/customer-companies/{customerCompany}/attachments', [CustomerCompanyAttachmentController::class, 'store']);
-                Route::get('rent/customer-companies/{customerCompany}/attachments/{attachment}/download', [CustomerCompanyAttachmentController::class, 'download']);
-                Route::delete('rent/customer-companies/{customerCompany}/attachments/{attachment}', [CustomerCompanyAttachmentController::class, 'destroy']);
+                Route::get('/customer-companies/{customerCompany}/attachments', [CustomerCompanyAttachmentController::class, 'index']);
+                Route::post('/customer-companies/{customerCompany}/attachments', [CustomerCompanyAttachmentController::class, 'store']);
+                Route::get('/customer-companies/{customerCompany}/attachments/{attachment}/download', [CustomerCompanyAttachmentController::class, 'download']);
+                Route::delete('/customer-companies/{customerCompany}/attachments/{attachment}', [CustomerCompanyAttachmentController::class, 'destroy']);
             });
         });
     });
