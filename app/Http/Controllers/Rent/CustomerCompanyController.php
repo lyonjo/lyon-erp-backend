@@ -14,15 +14,14 @@ class CustomerCompanyController extends Controller
     public function index(Request $request)
     {
         $data = $request->validate([
-            'search'   => ['nullable', 'string', 'max:100'],
+            'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
-            'is_blacklist'      => ['nullable', 'boolean'],
+            'is_blacklist' => ['nullable', 'boolean'],
             'is_multi_contract' => ['nullable', 'boolean'],
         ]);
 
         $companies = CustomerCompany::query()
             ->when($data['search'] ?? null, function ($query, string $search) {
-                // Escape LIKE wildcards typed by the user
                 $term = addcslashes($search, '%_\\') . '%';
 
                 $query->where(function ($q) use ($term) {
@@ -66,7 +65,7 @@ class CustomerCompanyController extends Controller
             action: 'updated',
             model: CustomerCompany::class,
             modelId: $customerCompany->id,
-            description: "Created customer company #{$customerCompany->id}",
+            description: "Updated customer company #{$customerCompany->id}",
             data: $customerCompany->toArray()
         );
         return new CustomerCompanyResource($customerCompany->fresh());

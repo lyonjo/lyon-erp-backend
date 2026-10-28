@@ -13,6 +13,7 @@ class CustomerCompany extends Model
     protected $fillable = [
         'name',
         'email',
+        'admin_name',
         'country_code',
         'phone',
         'address',
@@ -22,13 +23,15 @@ class CustomerCompany extends Model
     ];
 
     protected $casts = [
-        'is_blacklist'      => 'boolean',
+        'is_blacklist' => 'boolean',
         'is_multi_contract' => 'boolean',
     ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
     public function attachments(): HasMany
     {
         return $this->hasMany(CustomerCompanyAttachment::class, 'customer_company_id');
