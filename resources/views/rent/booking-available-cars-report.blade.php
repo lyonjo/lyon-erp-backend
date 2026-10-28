@@ -1,96 +1,102 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
     <title>Available Cars</title>
     <style>
         @page {
-            margin: 22px 25px
+            margin: 22px 26px;
         }
 
         body {
             font-family: DejaVu Sans, sans-serif;
             color: #182b40;
-            font-size: 11px
+            font-size: 11px;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .logo {
+            display: block;
+            margin: 0 auto 7px;
+            max-width: 110px;
+            max-height: 68px;
+        }
+
+        .company-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 3px 0 7px;
         }
 
         h1 {
-            text-align: center;
-            font-size: 22px;
-            margin: 12px 0 15px
+            font-size: 20px;
+            margin: 6px 0 12px;
         }
 
         .meta {
-            border: 2px solid #d0d8e1;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 18px
+            border: 1px solid #d0d8e1;
+            padding: 10px;
+            margin-bottom: 18px;
         }
 
         .meta table {
-            width: 100%
+            width: 100%;
+            border-collapse: collapse;
         }
 
         .meta td {
-            padding: 3px
+            padding: 4px 6px;
         }
 
-        .section {
-            page-break-inside: avoid;
-            margin: 15px 0 24px
-        }
-
-        h2 {
-            text-align: center;
-            font-size: 14px;
-            margin: 14px 0 12px
-        }
-
-        .head {
-            background: #6e93b8;
-            color: white;
-            border-radius: 9px 9px 0 0;
-            padding: 10px 9px
-        }
-
-        .head table,
-        .item table {
+        .prices {
             width: 100%;
+            border-collapse: collapse;
             table-layout: fixed;
-            border-collapse: collapse
         }
 
-        .head td {
-            text-align: center;
-            font-weight: bold;
-            color: white;
-            font-size: 10px
-        }
-
-        .item {
-            border: 2px solid #bdbdbd;
-            border-radius: 0 0 9px 9px;
-            padding: 10px 9px;
-            margin-top: 6px
-        }
-
-        .item td {
-            text-align: center;
+        .prices th {
+            background: #6e93b8;
+            color: #fff;
+            padding: 11px 6px;
             font-size: 10px;
-            word-wrap: break-word
+            text-align: center;
+        }
+
+        .prices td {
+            border-bottom: 1px solid #d6dde6;
+            padding: 11px 6px;
+            font-size: 10px;
+            text-align: center;
+            word-wrap: break-word;
+        }
+
+        .prices tbody tr:nth-child(even) {
+            background: #f7f9fc;
         }
 
         .empty {
             text-align: center;
             padding: 30px;
-            color: #7b8799
+            color: #7b8799;
         }
     </style>
 </head>
 
 <body>
-    <h1>Available Cars ({{ $total }})</h1>
+    <div class="report-header">
+        @if($logoSrc)
+        <img class="logo" src="{{ $logoSrc }}" alt="Company logo">
+        @endif
+        @if($mainCompanyName)
+        <div class="company-name">{{ $mainCompanyName }}</div>
+        @endif
+        <h1>Available Cars</h1>
+    </div>
     <div class="meta">
         <table>
             <tr>
@@ -105,37 +111,36 @@
             </tr>
         </table>
     </div>
-    @forelse($groups as $branch => $cars)
-    <section class="section">
-        <h2>{{ $branch }} ({{ $cars->count() }})</h2>
-        <div class="head">
-            <table>
-                <tr>
-                    <td width="16%">Vehicle Number</td>
-                    <td width="16%">Vehicle Brand</td>
-                    <td width="17%">Vehicle Name</td>
-                    <td width="11%">Model Year</td>
-                    <td width="25%">Company Name</td>
-                    <td width="15%">Daily Price</td>
-                </tr>
-            </table>
-        </div>
-        @foreach($cars as $car)
-        <div class="item">
-            <table>
-                <tr>
-                    <td width="16%">{{ $car['number'] }}</td>
-                    <td width="16%">{{ $car['brand'] }}</td>
-                    <td width="17%">{{ $car['model'] }}</td>
-                    <td width="11%">{{ $car['year'] }}</td>
-                    <td width="25%">{{ $car['owner'] }}</td>
-                    <td width="15%">{{ number_format($car['day_price'],2) }} {{ $currency }}</td>
-                </tr>
-            </table>
-        </div>
-        @endforeach
-    </section>
-    @empty<div class="empty">No available cars for the selected period.</div>@endforelse
+    <table class="prices">
+        <thead>
+            <tr>
+                <th style="width:15%">Car Rental Price</th>
+                <th style="width:15%">Brand</th>
+                <th style="width:15%">Model</th>
+                <th style="width:12%">Model Year</th>
+                <th style="width:12%">Rent Days</th>
+                <th style="width:15%">Daily Price</th>
+                <th style="width:16%">Total Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($rows as $row)
+            <tr>
+                <td>{{ $row['car_rental_price_id'] }}</td>
+                <td>{{ $row['brand'] }}</td>
+                <td>{{ $row['model'] }}</td>
+                <td>{{ $row['model_year'] }}</td>
+                <td>{{ $row['rent_days'] }}</td>
+                <td>{{ number_format($row['daily_price'], 2) }} {{ $currency }}</td>
+                <td>{{ number_format($row['total_price'], 2) }} {{ $currency }}</td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="7" class="empty">No available car rental prices for the selected period.</td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
 </body>
 
 </html>

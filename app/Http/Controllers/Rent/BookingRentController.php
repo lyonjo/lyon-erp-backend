@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Rent;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Rent\BookingRentRequest;
-use App\Models\Rent\{Booking, CarRentalPrice, CarReservation, Vehicle, Branch, Customer, CustomerCompany, ExtraItem, Setting};
+use App\Models\Rent\{Booking, CarRentalPrice, CarReservation, Vehicle, Branch, Customer, CustomerCompany, ExtraItem, Setting, Company};
 use Carbon\CarbonImmutable;
 use Illuminate\Http\{Request, JsonResponse};
-use Illuminate\Support\Facades\{DB, Schema};
+use Illuminate\Support\Facades\{DB, Schema, Storage};
 use Illuminate\Validation\ValidationException;
 
 class BookingRentController extends Controller
@@ -224,39 +224,61 @@ class BookingRentController extends Controller
       $c = CustomerCompany::findOrFail($data['customer_company_id']);
       $companyName = $c->company_name ?? $c->name ?? ('Company #' . $c->id);
     }
+    // Match the Create Booking availability result: a row represents a rental price
+    // category, not each individual physical car. The most recent applicable rate
+    // wins for each brand/model/model-year specification.
     $rows = collect();
-    $seen = [];
     foreach ($this->matchingPrices($data)->orderByDesc('id')->get() as $price) {
-      $day = $this->rate($price, $start, $end, $days);
-      if ($day === null) continue;
-      foreach ($this->availableVehicles($price, $start, $end) as $car) {
-        if (isset($seen[$car->id])) continue;
-        $seen[$car->id] = true;
-        $car->loadMissing(['brand:id,name', 'model:id,name', 'company:id,name', 'branch:id,name']);
-        $rows->push([
-          'number' => $car->number,
-          'brand' => $car->brand?->name ?? '-',
-          'model' => $car->model?->name ?? '-',
-          'year' => $car->model_year,
-          'owner' => $car->company?->name ?? '-',
-          'location' => $car->branch?->name ?: ($car->current_location ?: 'Unknown'),
-          'day_price' => $day
-        ]);
-      }
+      $daily = $this->rate($price, $start, $end, $days);
+      if ($daily === null) continue;
+      if ($this->availableVehicles($price, $start, $end)->isEmpty()) continue;
+      $rows->push([
+        'car_rental_price_id' => $price->id,
+        'brand' => $price->brand?->name ?? '—',
+        'model' => $price->model?->name ?? '—',
+        'model_year' => $price->model_year,
+        'rent_days' => $days,
+        'daily_price' => round((float) $daily, 2),
+        'total_price' => round((float) $daily * $days, 2),
+      ]);
     }
-    $groups = $rows->sortBy('number')->groupBy('location')->sortKeys();
+    $rows = $rows->unique(fn($row) => $row['brand'] . '|' . $row['model'] . '|' . $row['model_year'])->values();
+
+    $mainCompany = Company::query()->with('logo')->where('is_main', 1)->first();
+    $logoSrc = $mainCompany ? $this->availabilityCompanyLogo($mainCompany) : null;
+    $displayCompanyName = $mainCompany?->name ?? null;
+
     if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) abort(500, 'Install barryvdh/laravel-dompdf.');
     $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('rent.booking-available-cars-report', [
-      'groups' => $groups,
-      'total' => $rows->count(),
+      'rows' => $rows,
       'days' => $days,
       'start' => $start,
       'end' => $end,
       'companyName' => $companyName,
       'clientType' => $data['client_type'],
       'currency' => $this->settings()['currency'],
+      'mainCompanyName' => $displayCompanyName,
+      'logoSrc' => $logoSrc,
     ])->setPaper('a4', 'landscape');
     return $pdf->stream('booking-available-cars.pdf');
+  }
+  /** Inline tenant logo image for PDF generation (authenticated files cannot be linked directly). */
+  private function availabilityCompanyLogo(Company $company): ?string
+  {
+    $company->loadMissing('logo');
+    $storedPath = $company->logo?->path;
+    if (!is_string($storedPath) || trim($storedPath) === '') return null;
+    $path = ltrim(str_replace('\\', '/', trim($storedPath)), '/');
+    if (str_contains($path, '..') || str_contains($path, '://')) return null;
+    foreach (['public', 'local'] as $diskName) {
+      $disk = Storage::disk($diskName);
+      if (!$disk->exists($path)) continue;
+      $bytes = $disk->get($path);
+      $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+      if (in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true))
+        return 'data:' . $mime . ';base64,' . base64_encode($bytes);
+    }
+    return null;
   }
   public function index(Request $r): JsonResponse
   {
