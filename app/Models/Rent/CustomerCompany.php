@@ -4,6 +4,7 @@ namespace App\Models\Rent;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CustomerCompany extends Model
 {
@@ -27,5 +28,9 @@ class CustomerCompany extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(CustomerCompanyAttachment::class, 'customer_company_id');
     }
 }
