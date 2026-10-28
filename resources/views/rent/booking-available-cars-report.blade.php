@@ -79,6 +79,19 @@
             background: #f7f9fc;
         }
 
+        .car-photo {
+            display: block;
+            width: 86px;
+            height: 55px;
+            object-fit: contain;
+            margin: 0 auto;
+        }
+
+        .photo-empty {
+            color: #98a3b1;
+            font-size: 9px;
+        }
+
         .empty {
             text-align: center;
             padding: 30px;
@@ -102,7 +115,6 @@
             <tr>
                 <td>Client Type: {{ ucfirst($clientType) }}</td>
                 <td>Customer Company: {{ $companyName ?? '—' }}</td>
-                <td>Rental Days: {{ $days }}</td>
             </tr>
             <tr>
                 <td>From: {{ $start->format('Y-m-d H:i') }}</td>
@@ -114,7 +126,7 @@
     <table class="prices">
         <thead>
             <tr>
-                <th style="width:15%">Car Rental Price</th>
+                <th style="width:16%">Car Image</th>
                 <th style="width:15%">Brand</th>
                 <th style="width:15%">Model</th>
                 <th style="width:12%">Model Year</th>
@@ -126,7 +138,13 @@
         <tbody>
             @forelse($rows as $row)
             <tr>
-                <td>{{ $row['car_rental_price_id'] }}</td>
+                <td>
+                    @if(!empty($row['image_src']))
+                    <img class="car-photo" src="{{ $row['image_src'] }}" alt="Car image">
+                    @else
+                    <span class="photo-empty">No image</span>
+                    @endif
+                </td>
                 <td>{{ $row['brand'] }}</td>
                 <td>{{ $row['model'] }}</td>
                 <td>{{ $row['model_year'] }}</td>

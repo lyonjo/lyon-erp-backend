@@ -232,7 +232,19 @@ class BookingRentController extends Controller
       $daily = $this->rate($price, $start, $end, $days);
       if ($daily === null) continue;
       if ($this->availableVehicles($price, $start, $end)->isEmpty()) continue;
+      // Use the same main-image fallback as Create Booking for company rates.
+      $imagePrice = $price;
+      if ($price->client_type === 'company') {
+        $basePrice = CarRentalPrice::query()->with('images')
+          ->where('client_type', 'customer')->whereNull('company_id')
+          ->where('brand_id', $price->brand_id)->where('model_id', $price->model_id)
+          ->where('model_year', $price->model_year)->orderByDesc('id')->first();
+        if ($basePrice) $imagePrice = $basePrice;
+      }
+      $mainImage = $imagePrice->images->firstWhere('type', 'main');
+      $imageSrc = $this->availabilityStoredImageDataUri($mainImage?->path);
       $rows->push([
+        'image_src' => $imageSrc,
         'car_rental_price_id' => $price->id,
         'brand' => $price->brand?->name ?? '—',
         'model' => $price->model?->name ?? '—',
@@ -262,11 +274,15 @@ class BookingRentController extends Controller
     ])->setPaper('a4', 'landscape');
     return $pdf->stream('booking-available-cars.pdf');
   }
-  /** Inline tenant logo image for PDF generation (authenticated files cannot be linked directly). */
+  /** Inline the company logo using the tenant file storage. */
   private function availabilityCompanyLogo(Company $company): ?string
   {
     $company->loadMissing('logo');
-    $storedPath = $company->logo?->path;
+    return $this->availabilityStoredImageDataUri($company->logo?->path);
+  }
+  /** DomPDF cannot fetch authenticated image endpoints, so embed stored images directly. */
+  private function availabilityStoredImageDataUri(?string $storedPath): ?string
+  {
     if (!is_string($storedPath) || trim($storedPath) === '') return null;
     $path = ltrim(str_replace('\\', '/', trim($storedPath)), '/');
     if (str_contains($path, '..') || str_contains($path, '://')) return null;
