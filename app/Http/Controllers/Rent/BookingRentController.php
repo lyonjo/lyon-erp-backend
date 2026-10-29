@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Rent\BookingRentRequest;
 use App\Models\Rent\{Booking, CarRentalPrice, CarReservation, Vehicle, Branch, Customer, CustomerCompany, ExtraItem, Setting, Company};
 use Carbon\CarbonImmutable;
+use App\Support\Rent\BillableRentalDays;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\{DB, Schema, Storage};
 use Illuminate\Validation\ValidationException;
@@ -15,25 +16,14 @@ class BookingRentController extends Controller
   private const BLOCKING = ['pending', 'online_pending', 'approved', 'realyed'];
   private function settings(): array
   {
-    return ['currency' => strtoupper((string)(Setting::where('key', 'currency')->value('value') ?: 'JOD'))];
+    return ['currency' => strtoupper((string)(Setting::where('key', 'currency')->value('value') ?: 'JOD')), 'additional_hours' => BillableRentalDays::allowance()];
   }
   private function duration(array $d, bool $applyReportAllowance = false): array
   {
     $start = CarbonImmutable::parse($d['start_date'] . ' ' . $d['start_time']);
     $end = CarbonImmutable::parse($d['end_date'] . ' ' . $d['end_time']);
-    if ($end->lessThanOrEqualTo($start)) throw ValidationException::withMessages(['end_date' => ['End time must be after start time.']]);
-    $minutes = (int) round($start->diffInMinutes($end));
-    if ($applyReportAllowance) {
-      // Existing tenants without the setting retain their original ceiling behavior (0 hours).
-      $allowance = (int) (Setting::where('key', 'additional_hours')->value('value') ?? 0);
-      $allowance = max(0, min(24, $allowance));
-      $fullDays = intdiv($minutes, 1440);
-      $remainder = $minutes % 1440;
-      $days = max(1, $fullDays + ($remainder > $allowance * 60 ? 1 : 0));
-    } else {
-      $days = (int) ceil($minutes / 1440);
-    }
-    if ($days < 1 || $days > 365) throw ValidationException::withMessages(['end_date' => ['Rental must be 1–365 billed days.']]);
+    $days = BillableRentalDays::count($start, $end);
+    if ($days < 1 || $days > 365) throw ValidationException::withMessages(['end_date' => ['Rental must be 1–365 billed days; end time must follow pickup.']]);
     return [$start, $end, $days];
   }
   private function rate(CarRentalPrice $price, CarbonImmutable $start, CarbonImmutable $end, int $days): ?float

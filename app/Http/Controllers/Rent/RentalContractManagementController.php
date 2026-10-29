@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Rent;
 use App\Http\Controllers\Controller;
 use App\Models\Rent\{RentalContract, Booking, Vehicle, ExtraItem, Setting, CustomerDetail};
 use Carbon\Carbon;
+use App\Support\Rent\BillableRentalDays;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -48,12 +49,13 @@ class RentalContractManagementController extends Controller
 
     private function settings(): array
     {
-        $map = Setting::whereIn('key', ['car_rental_km_daily', 'car_rental_price_per_km', 'currency', 'booking_tax_percent'])->pluck('value', 'key');
+        $map = Setting::whereIn('key', ['car_rental_km_daily', 'car_rental_price_per_km', 'currency', 'booking_tax_percent', 'additional_hours'])->pluck('value', 'key');
         return [
             'km_daily' => max(0, (float)($map['car_rental_km_daily'] ?? 0)),
             'price_per_km' => max(0, (float)($map['car_rental_price_per_km'] ?? 0)),
             'currency' => strtoupper((string)($map['currency'] ?? 'JOD')),
             'tax_percent' => max(0, (float)($map['booking_tax_percent'] ?? 0)),
+            'additional_hours' => BillableRentalDays::allowance(),
         ];
     }
 
@@ -98,7 +100,7 @@ class RentalContractManagementController extends Controller
     {
         $start = Carbon::parse(substr((string)$booking->start_date, 0, 10) . ' ' . substr((string)$booking->start_time, 0, 8));
         if ($end->lessThanOrEqualTo($start)) throw ValidationException::withMessages(['end_date' => ['Drop-off must be later than pickup.']]);
-        $days = max(1, (int)ceil($start->diffInSeconds($end) / 86400));
+        $days = BillableRentalDays::count($start, $end);
         if ($days > 365) throw ValidationException::withMessages(['end_date' => ['Rental exceeds 365 days.']]);
         $price = $booking->rentalPrice;
         if (!$price) throw ValidationException::withMessages(['end_date' => ['Booking rental pricing record is missing.']]);
@@ -182,15 +184,8 @@ class RentalContractManagementController extends Controller
             if ($collision) throw ValidationException::withMessages(['end_date' => ['The car is reserved by another booking in this period.']]);
             $kmOut = (int)$contract->km_out;
             $kmIn = isset($data['km_in']) ? (int)$data['km_in'] : null;
-            // During an ordinary update, an empty/zero reading means the car has not returned yet.
-            // A positive reading must not be below the recorded KM Out.
-            if (!$close && $kmIn !== null && $kmIn !== 0 && $kmIn < $kmOut) {
-                throw ValidationException::withMessages(['km_in' => ['KM In cannot be less than KM Out, unless left empty or set to zero.']]);
-            }
-            // Closing is final: KM In must be a real, greater odometer reading.
-            if ($close && ($kmIn === null || $kmIn <= $kmOut)) {
-                throw ValidationException::withMessages(['km_in' => ['To close the contract, KM In is required and must be greater than KM Out.']]);
-            }
+            if ($kmIn !== null && $kmIn < $kmOut) throw ValidationException::withMessages(['km_in' => ['KM In cannot be less than KM Out.']]);
+            if ($close && $kmIn === null) throw ValidationException::withMessages(['km_in' => ['KM In is required to close the contract.']]);
             $cfg = $this->settings();
             $allowedKm = $cfg['km_daily'] * $days;
             $extraKmCharge = $kmIn === null ? 0.0 : round(max(0, $kmIn - $kmOut - $allowedKm) * $cfg['price_per_km'], 2);
