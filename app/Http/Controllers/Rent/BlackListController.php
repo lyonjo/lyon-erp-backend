@@ -7,7 +7,6 @@ use App\Models\Rent\Customer;
 use App\Models\Rent\CustomerCompany;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class BlackListController extends Controller
 {
@@ -31,6 +30,7 @@ class BlackListController extends Controller
                 'email',
                 'country_code',
                 DB::raw('phone_number as phone'),
+                'note',
                 'is_blacklist',
                 DB::raw("'customer' as type"),
                 DB::raw('created_at'),
@@ -44,6 +44,7 @@ class BlackListController extends Controller
                 'email',
                 'country_code',
                 'phone',
+                'note',
                 'is_blacklist',
                 DB::raw("'company' as type"),
                 DB::raw('created_at'),
