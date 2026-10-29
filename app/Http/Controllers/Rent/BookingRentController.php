@@ -17,12 +17,22 @@ class BookingRentController extends Controller
   {
     return ['currency' => strtoupper((string)(Setting::where('key', 'currency')->value('value') ?: 'JOD'))];
   }
-  private function duration(array $d): array
+  private function duration(array $d, bool $applyReportAllowance = false): array
   {
     $start = CarbonImmutable::parse($d['start_date'] . ' ' . $d['start_time']);
     $end = CarbonImmutable::parse($d['end_date'] . ' ' . $d['end_time']);
     if ($end->lessThanOrEqualTo($start)) throw ValidationException::withMessages(['end_date' => ['End time must be after start time.']]);
-    $days = (int)ceil($start->diffInMinutes($end) / 1440);
+    $minutes = (int) round($start->diffInMinutes($end));
+    if ($applyReportAllowance) {
+      // Existing tenants without the setting retain their original ceiling behavior (0 hours).
+      $allowance = (int) (Setting::where('key', 'additional_hours')->value('value') ?? 0);
+      $allowance = max(0, min(24, $allowance));
+      $fullDays = intdiv($minutes, 1440);
+      $remainder = $minutes % 1440;
+      $days = max(1, $fullDays + ($remainder > $allowance * 60 ? 1 : 0));
+    } else {
+      $days = (int) ceil($minutes / 1440);
+    }
     if ($days < 1 || $days > 365) throw ValidationException::withMessages(['end_date' => ['Rental must be 1–365 billed days.']]);
     return [$start, $end, $days];
   }
@@ -218,7 +228,8 @@ class BookingRentController extends Controller
     if ($data['client_type'] === 'company') {
       $this->ensureEligibleClient($data);
     }
-    [$start, $end, $days] = $this->duration($data);
+    // Apply the extra-hour allowance to the PDF report days, rental interval, and total.
+    [$start, $end, $days] = $this->duration($data, true);
     $companyName = null;
     if ($data['client_type'] === 'company') {
       $c = CustomerCompany::findOrFail($data['customer_company_id']);

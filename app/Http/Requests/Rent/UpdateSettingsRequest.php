@@ -25,6 +25,7 @@ class UpdateSettingsRequest extends FormRequest
             'car_rental_km_daily' => ['required', 'integer', 'min:0', 'max:1000000'],
             'car_rental_price_per_km' => ['required', 'numeric', 'min:0', 'max:999999999.99', 'decimal:0,4'],
             'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
+            'additional_hours' => ['required', 'integer', 'between:0,24'],
         ];
     }
 }

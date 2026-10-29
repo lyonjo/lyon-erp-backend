@@ -18,5 +18,6 @@ class Setting extends Model
         'car_rental_km_daily' => '0',
         'car_rental_price_per_km' => '0',
         'currency' => 'JOD',
+        'additional_hours' => '0',
     ];
 }
