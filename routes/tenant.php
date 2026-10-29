@@ -48,6 +48,7 @@ use App\Http\Controllers\Rent\RentalContractInvoiceController;
 use App\Http\Controllers\Rent\RentalContractDetailsPdfController;
 use App\Http\Middleware\RequireCustomerFrontDocuments;
 use App\Http\Controllers\Rent\CustomerCompanyAttachmentController;
+use App\Http\Controllers\Rent\BranchDestinationController;
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -254,6 +255,11 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::post('/customer-companies/{customerCompany}/attachments', [CustomerCompanyAttachmentController::class, 'store']);
                 Route::get('/customer-companies/{customerCompany}/attachments/{attachment}/download', [CustomerCompanyAttachmentController::class, 'download']);
                 Route::delete('/customer-companies/{customerCompany}/attachments/{attachment}', [CustomerCompanyAttachmentController::class, 'destroy']);
+                Route::get('/branches/{branch}/destinations/options', [BranchDestinationController::class, 'options']);
+                Route::get('/branches/{branch}/destinations', [BranchDestinationController::class, 'index']);
+                Route::post('/branches/{branch}/destinations', [BranchDestinationController::class, 'store']);
+                Route::put('/branches/{branch}/destinations/{destination}', [BranchDestinationController::class, 'update']);
+                Route::delete('/branches/{branch}/destinations/{destination}', [BranchDestinationController::class, 'destroy']);
             });
         });
     });

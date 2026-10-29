@@ -7,6 +7,8 @@ use App\Http\Requests\Rent\BookingRentRequest;
 use App\Models\Rent\{Booking, CarRentalPrice, CarReservation, Vehicle, Branch, Customer, CustomerCompany, ExtraItem, Setting, Company};
 use Carbon\CarbonImmutable;
 use App\Support\Rent\BillableRentalDays;
+use App\Support\Rent\BranchDestinationFee;
+use App\Models\Rent\BranchDestination;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\{DB, Schema, Storage};
 use Illuminate\Validation\ValidationException;
@@ -92,6 +94,7 @@ class BookingRentController extends Controller
       'customers' => $this->eligibleClients(Customer::query(), 'customers')->select('id')->selectRaw("`{$customerName}` as name")->orderBy($customerName)->limit(1000)->get(),
       'customer_companies' => $this->eligibleClients(CustomerCompany::query(), 'customer_companies')->select('id')->selectRaw("`{$companyName}` as name")->orderBy($companyName)->limit(1000)->get(),
       'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
+      'branch_destinations' => BranchDestination::select('branch_id', 'destination_branch_id', 'price')->get(),
       'extra_items' => ExtraItem::select('id', 'name', 'price', 'is_daily')->orderBy('name')->get(),
       'settings' => $this->settings()
     ]]);
@@ -100,6 +103,7 @@ class BookingRentController extends Controller
   {
     $d = $this->validateSearch($r);
     $this->ensureEligibleClient($d);
+    BranchDestinationFee::forRoute((int)$d['pick_up_branch_id'], (int)$d['return_branch_id']);
     [$start, $end, $days] = $this->duration($d);
     $rows = [];
     // Each pricing ID is a different contractual rate; distinct physical cars are only counted for availability.
@@ -154,7 +158,7 @@ class BookingRentController extends Controller
         throw ValidationException::withMessages(['car_rental_price_id' => ['No unreserved, unsold vehicle is available.']]);
       $pickup = Branch::findOrFail($d['pick_up_branch_id']);
       $return = Branch::findOrFail($d['return_branch_id']);
-      $branchFee = (int)$pickup->id === (int)$return->id ? 0 : 5;
+      $branchFee = BranchDestinationFee::forRoute((int)$pickup->id, (int)$return->id);
       $ids = $d['extra_item_ids'] ?? [];
       $items = ExtraItem::whereIn('id', $ids)->get();
       $extra = 0;
