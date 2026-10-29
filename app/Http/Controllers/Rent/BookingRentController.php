@@ -260,8 +260,11 @@ class BookingRentController extends Controller
     $logoSrc = $mainCompany ? $this->availabilityCompanyLogo($mainCompany) : null;
     $displayCompanyName = $mainCompany?->name ?? null;
 
-    if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) abort(500, 'Install barryvdh/laravel-dompdf.');
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('rent.booking-available-cars-report', [
+    // mPDF performs Arabic joining/shaping correctly (unlike the former DomPDF setup).
+    if (!class_exists(\Mpdf\Mpdf::class)) {
+      abort(500, 'mPDF is required for Arabic PDF rendering. Install mpdf/mpdf.');
+    }
+    $html = view('rent.booking-available-cars-report', [
       'rows' => $rows,
       'days' => $days,
       'start' => $start,
@@ -271,8 +274,22 @@ class BookingRentController extends Controller
       'currency' => $this->settings()['currency'],
       'mainCompanyName' => $displayCompanyName,
       'logoSrc' => $logoSrc,
-    ])->setPaper('a4', 'landscape');
-    return $pdf->stream('booking-available-cars.pdf');
+    ])->render();
+    $pdf = new \Mpdf\Mpdf([
+      'mode' => 'utf-8',
+      'format' => 'A4-L',
+      'margin_left' => 10,
+      'margin_right' => 10,
+      'margin_top' => 12,
+      'margin_bottom' => 13,
+      'default_font' => 'dejavusans',
+    ]);
+    $pdf->autoScriptToLang = true;
+    $pdf->autoLangToFont = true;
+    $pdf->WriteHTML($html);
+    return response($pdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200)
+      ->header('Content-Type', 'application/pdf')
+      ->header('Content-Disposition', 'inline; filename="booking-available-cars.pdf"');
   }
   /** Inline the company logo using the tenant file storage. */
   private function availabilityCompanyLogo(Company $company): ?string
