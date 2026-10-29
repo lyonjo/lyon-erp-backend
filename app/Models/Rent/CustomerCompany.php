@@ -18,6 +18,7 @@ class CustomerCompany extends Model
         'phone',
         'address',
         'is_blacklist',
+        'note',
         'is_multi_contract',
         'user_id',
     ];

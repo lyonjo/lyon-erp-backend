@@ -24,6 +24,7 @@ class CustomerCompanyRequest extends FormRequest
             'phone' => [$req, 'string', 'max:30'],
             'address' => [$req, 'string', 'max:255'],
             'is_blacklist' => ['sometimes', 'boolean'],
+            'note' => ['nullable', 'string', 'max:1000'],
             'is_multi_contract' => ['sometimes', 'boolean'],
             'user_id' => ['nullable', 'exists:users,id'],
         ];

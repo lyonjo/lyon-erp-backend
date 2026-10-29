@@ -24,7 +24,7 @@ class CustomerController extends Controller
         ]);
 
         $customers = Customer::query()
-            ->select(['id', 'name', 'is_blacklist', 'is_multi_contract'])
+            ->select(['id', 'name', 'is_blacklist', 'is_multi_contract', 'note'])
             ->with('details:customer_id,nationality')
             ->when($data['search'] ?? null, function ($query, string $search) {
                 // Escape LIKE wildcards typed by the user

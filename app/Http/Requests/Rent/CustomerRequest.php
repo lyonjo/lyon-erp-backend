@@ -32,6 +32,7 @@ class CustomerRequest extends FormRequest
             'address'           => ['nullable', 'string', 'max:1000'],
             'is_multi_contract' => ['sometimes', 'boolean'],
             'is_blacklist'      => ['sometimes', 'boolean'],
+            'note'              => ['nullable', 'string', 'max:1000'],
             'user_id'           => ['nullable', 'exists:users,id'],
 
             'details'                         => ['sometimes', 'array'],

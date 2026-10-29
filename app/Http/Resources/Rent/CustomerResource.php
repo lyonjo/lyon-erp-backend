@@ -22,6 +22,7 @@ class CustomerResource extends JsonResource
             'address'           => $this->address,
             'is_multi_contract' => $this->is_multi_contract,
             'is_blacklist'      => $this->is_blacklist,
+            'note'              => $this->note,
 
             'details' => $this->whenLoaded(
                 'details',

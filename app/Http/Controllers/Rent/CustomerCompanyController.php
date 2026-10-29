@@ -80,8 +80,10 @@ class CustomerCompanyController extends Controller
 
         if (isset($payload['data']) && is_array($payload['data'])) {
             $payload['data']['admin_name'] = $company->admin_name;
+            $payload['data']['note'] = $company->note;
         } else {
             $payload['admin_name'] = $company->admin_name;
+            $payload['note'] = $company->note;
         }
 
         return $response->setData($payload)->setStatusCode($status);

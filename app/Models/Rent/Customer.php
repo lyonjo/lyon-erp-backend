@@ -22,6 +22,7 @@ class Customer extends Model
         'address',
         'is_multi_contract',
         'is_blacklist',
+        'note',
     ];
 
     protected $casts = [
