@@ -138,12 +138,13 @@
     <table class="prices">
         <thead>
             <tr>
-                <th style="width:23%">Car Image</th>
-                <th style="width:15%">Brand</th>
-                <th style="width:17%">Model</th>
-                <th style="width:13%">Model Year</th>
-                <th style="width:16%">Daily Price</th>
-                <th style="width:16%">Total Price</th>
+                <th style="width:22%">Car Image</th>
+                <th style="width:13%">Brand</th>
+                <th style="width:15%">Model</th>
+                <th style="width:12%">Model Year</th>
+                <th style="width:14%">Daily Price</th>
+                <th style="width:10%">Rent Days</th>
+                <th style="width:14%">Total Price</th>
             </tr>
         </thead>
         <tbody>
@@ -154,11 +155,12 @@
                 <td>{{ $row['model'] }}</td>
                 <td>{{ $row['model_year'] }}</td>
                 <td>{{ number_format($row['daily_price'], 2) }} {{ $currency }}</td>
+                <td>{{ $row['rent_days'] }}</td>
                 <td>{{ number_format($row['total_price'], 2) }} {{ $currency }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="6" class="empty">No available car rental prices for the selected period.</td>
+                <td colspan="7" class="empty">No available car rental prices for the selected period.</td>
             </tr>
             @endforelse
         </tbody>
