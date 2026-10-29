@@ -276,6 +276,7 @@ class BookingRentController extends Controller
       'logoSrc' => $logoSrc,
     ])->render();
     $pdf = new \Mpdf\Mpdf([
+      'tempDir' => storage_path('framework/cache/mpdf'),
       'mode' => 'utf-8',
       'format' => 'A4-L',
       'margin_left' => 10,
