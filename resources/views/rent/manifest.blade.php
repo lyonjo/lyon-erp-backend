@@ -1,3 +1,24 @@
+@php
+// The report deliberately uses table-based normal document flow: mPDF does not
+// position absolutely-placed HTML/CSS reliably with zero-margin A4 landscape.
+$customerName = $customerName ?? '-';
+$pickupTime = $pickupTime ?? '-';
+$carNo = $carNo ?? '-';
+$vehicle = $vehicle ?? '-';
+$driver = $driver ?? '-';
+$flight = $flight ?? '-';
+$date = $date ?? '-';
+$from = $from ?? '-';
+$to = $to ?? '-';
+$companyName = $companyName ?? null;
+$logoSrc = $logoSrc ?? null;
+$nameFont = max(14, min(80, (int) ($nameFont ?? 44)));
+$detailFont = max(8, min(40, (int) ($detailFont ?? 13)));
+// Keep the name centered visually, like the original manifest sample.
+// Avoid moving detail rows when a long name is entered.
+$nameTop = 27;
+if (mb_strlen($customerName) > 28) $nameTop = 29;
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 
@@ -12,101 +33,102 @@
             margin: 0;
             padding: 0;
             font-family: dejavusans;
-            color: #414141;
+            color: #484848;
         }
 
-        .page-border {
-            position: absolute;
-            left: 3mm;
-            top: 3mm;
-            width: 291mm;
-            height: 204mm;
-            border: .7pt solid #333;
-        }
-
-        .header {
-            position: absolute;
-            top: 11mm;
-            left: 14mm;
-            width: 269mm;
-        }
-
-        .header-table {
+        table {
             border-collapse: collapse;
-            width: 100%;
             table-layout: fixed;
         }
 
-        .header-table td {
-            width: 50%;
+        .manifest {
+            width: 297mm;
+        }
+
+        .headrow {
+            height: 31mm;
+        }
+
+        .brand-table {
+            width: 100%;
+        }
+
+        .brand-table td {
             vertical-align: middle;
         }
 
-        .company-name {
-            font-weight: bold;
-            font-size: 18pt;
+        .brand-name {
+            width: 50%;
             text-align: left;
-            color: #152c49;
+            padding-left: 16mm;
+            font-size: 18pt;
+            font-weight: bold;
+            color: #182c48;
         }
 
-        .company-logo {
+        .brand-logo {
+            width: 50%;
             text-align: right;
+            padding-right: 16mm;
         }
 
-        .company-logo img {
-            max-height: 22mm;
-            max-width: 55mm;
+        .brand-logo img {
+            width: 40mm;
         }
 
-        .customer-name-box {
-            position: absolute;
+        .name-row {
+            height: 137mm;
+        }
 
-            top: {
+        .name-area {
+            vertical-align: top;
+            text-align: center;
+
+            padding-top: {
                     {
-                    $namePaddingTop
+                    $nameTop
                 }
             }
 
             mm;
-            left: 9mm;
-            width: 279mm;
-            height: 92mm;
-            text-align: center;
+            padding-left: 11mm;
+            padding-right: 11mm;
         }
 
-        .customer-name {
-            padding-top: 36mm;
-            text-align: center;
-
+        .person-name {
             font-size: {
                     {
-                    $nameFont
+                    $detailFont
                 }
             }
 
             pt;
-            line-height: 1.25;
-            font-weight: 600;
+            font-weight: normal;
             color: #111;
+            line-height: 1.3;
+            text-align: center;
         }
 
-        .details-footer {
-            position: absolute;
-            bottom: 12mm;
-            left: 8mm;
-            width: 281mm;
+        .gap-row {
+            height: 9mm;
+        }
+
+        .details-row {
+            height: 26mm;
+        }
+
+        .details-wrap {
+            padding-left: 7mm;
+            padding-right: 7mm;
+            vertical-align: top;
         }
 
         .details {
             width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
         }
 
         .details td {
             width: 33.333%;
-            vertical-align: top;
-            padding: 0 7mm;
 
             font-size: {
                     {
@@ -115,57 +137,70 @@
             }
 
             pt;
-            line-height: 1.6;
+            line-height: 1.45;
+            vertical-align: top;
+            padding: 0 8mm;
         }
 
-        .detail-row {
-            margin: 0 0 5mm 0;
+        .detail {
+            margin: 0 0 1.6mm 0;
         }
 
         .label {
             font-weight: bold;
         }
 
-        .value {
-            font-weight: 500;
+        .end-row {
+            height: 7mm;
         }
     </style>
 </head>
 
 <body>
-    <div class="page-border"></div>
-    @if($companyName || $logoSrc)
-    <div class="header">
-        <table class="header-table">
-            <tr>
-                <td class="company-name">{{ $companyName ?? '' }}</td>
-                <td class="company-logo">@if($logoSrc)<img src="{{ $logoSrc }}" alt="">@endif</td>
-            </tr>
-        </table>
-    </div>
-    @endif
-    <div class="customer-name-box">
-        <div class="customer-name">{{ $customerName }}</div>
-    </div>
-    <div class="details-footer">
-        <table class="details">
-            <tr>
-                <td>
-                    <p class="detail-row"><span class="label">Pickup Time:</span> <span class="value">{{ $pickupTime }}</span></p>
-                    <p class="detail-row"><span class="label">Car No.:</span> <span class="value">{{ $carNo }}</span></p>
-                    <p class="detail-row"><span class="label">Vehicle:</span> <span class="value">{{ $vehicle }}</span></p>
-                </td>
-                <td>
-                    <p class="detail-row"><span class="label">From / To:</span> <span class="value">{{ $from }} - {{ $to }}</span></p>
-                    <p class="detail-row"><span class="label">Driver:</span> <span class="value">{{ $driver }}</span></p>
-                    <p class="detail-row"><span class="label">Flight:</span> <span class="value">{{ $flight }}</span></p>
-                </td>
-                <td>
-                    <p class="detail-row"><span class="label">Date:</span> <span class="value">{{ $date }}</span></p>
-                </td>
-            </tr>
-        </table>
-    </div>
+    <table class="manifest">
+        <tr class="headrow">
+            <td>
+                <table class="brand-table">
+                    <tr>
+                        <td class="brand-name">{{ $companyName ?: '' }}</td>
+                        <td class="brand-logo">@if($logoSrc)<img src="{{ $logoSrc }}" width="150" alt="">@endif</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr class="name-row">
+            <td class="name-area">
+                <div class="person-name">{{ $customerName }}</div>
+            </td>
+        </tr>
+        <tr class="gap-row">
+            <td></td>
+        </tr>
+        <tr class="details-row">
+            <td class="details-wrap">
+                <table class="details">
+                    <tr>
+                        <td>
+                            <div class="detail"><span class="label">Pickup Time:</span> &nbsp;{{ $pickupTime }}</div>
+                            <div class="detail"><span class="label">Car No.:</span> &nbsp;{{ $carNo }}</div>
+                            <div class="detail"><span class="label">Vehicle:</span> &nbsp;{{ $vehicle }}</div>
+                        </td>
+                        <td>
+                            <div class="detail"><span class="label">From / To:</span> &nbsp;{{ $from }} - {{ $to }}</div>
+                            <div class="detail"><span class="label">Driver:</span> &nbsp;{{ $driver }}</div>
+                            <div class="detail"><span class="label">Flight:</span> &nbsp;{{ $flight }}</div>
+                        </td>
+                        <td>
+                            <div class="detail"><span class="label">Date:</span> &nbsp;{{ $date }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr class="end-row">
+            <td></td>
+        </tr>
+    </table>
 </body>
 
 </html>
