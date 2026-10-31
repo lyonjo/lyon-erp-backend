@@ -1,6 +1,4 @@
 @php
-// The report deliberately uses table-based normal document flow: mPDF does not
-// position absolutely-placed HTML/CSS reliably with zero-margin A4 landscape.
 $customerName = $customerName ?? '-';
 $pickupTime = $pickupTime ?? '-';
 $carNo = $carNo ?? '-';
@@ -12,13 +10,40 @@ $from = $from ?? '-';
 $to = $to ?? '-';
 $companyName = $companyName ?? null;
 $logoSrc = $logoSrc ?? null;
-$nameFont = max(14, min(80, (int) ($nameFont ?? 44)));
-$detailFont = max(8, min(40, (int) ($detailFont ?? 13)));
-// Keep the name centered visually, like the original manifest sample.
-// Avoid moving detail rows when a long name is entered.
-$nameTop = 27;
-if (mb_strlen($customerName) > 28) $nameTop = 29;
+
+$parsePt = function ($value, $default = 13) {
+if ($value === null || $value === '') {
+return $default;
+}
+
+if (is_numeric($value)) {
+return (int) $value;
+}
+
+if (preg_match('/(\d+)/', (string) $value, $matches)) {
+return (int) $matches[1];
+}
+
+return $default;
+};
+
+// your page currently sends only "font"
+$detailFontPt = max(8, min(40, $parsePt($detailFont ?? null, 13)));
+$nameFontPt = max(12, min(80, $parsePt($nameFont ?? $detailFont ?? null, $detailFontPt)));
+
+$fmtDate = function ($value) {
+if (!$value || $value === '-') {
+return '-';
+}
+
+try {
+return \Carbon\Carbon::parse($value)->format('Y-m-d');
+} catch (\Exception $e) {
+return (string) $value;
+}
+};
 @endphp
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -32,175 +57,212 @@ if (mb_strlen($customerName) > 28) $nameTop = 29;
         body {
             margin: 0;
             padding: 0;
-            font-family: dejavusans;
-            color: #484848;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            color: #4a4a4a;
         }
 
-        table {
+        .page {
+            width: 297mm;
+            height: 210mm;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        .outer {
+            width: 100%;
+            height: 100%;
             border-collapse: collapse;
             table-layout: fixed;
         }
 
-        .manifest {
-            width: 297mm;
+        .header-row {
+            height: 32mm;
         }
 
-        .headrow {
-            height: 31mm;
+        .middle-row {
+            height: 128mm;
         }
 
-        .brand-table {
+        .footer-row {
+            height: 50mm;
+        }
+
+        .header-cell {
+            padding: 10mm 14mm 0 14mm;
+            vertical-align: top;
+        }
+
+        .header-table {
             width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
 
-        .brand-table td {
+        .header-table td {
             vertical-align: middle;
         }
 
-        .brand-name {
+        .company-name {
             width: 50%;
             text-align: left;
-            padding-left: 16mm;
             font-size: 18pt;
             font-weight: bold;
             color: #182c48;
         }
 
-        .brand-logo {
+        .company-logo {
             width: 50%;
             text-align: right;
-            padding-right: 16mm;
         }
 
-        .brand-logo img {
-            width: 40mm;
+        .company-logo img {
+            max-height: 38mm;
+            max-width: 52mm;
+            width: auto;
+            height: auto;
         }
 
-        .name-row {
-            height: 137mm;
+        .middle-cell {
+            vertical-align: middle;
+            text-align: center;
+            padding: 0 18mm;
         }
 
-        .name-area {
-            vertical-align: top;
+        .customer-name {
+            margin: 0;
+            padding: 0;
             text-align: center;
 
-            padding-top: {
-                    {
-                    $nameTop
-                }
-            }
-
-            mm;
-            padding-left: 11mm;
-            padding-right: 11mm;
-        }
-
-        .person-name {
             font-size: {
                     {
-                    $detailFont
+                    $nameFontPt
                 }
             }
 
             pt;
             font-weight: normal;
-            color: #111;
-            line-height: 1.3;
-            text-align: center;
+            color: #4a4a4a;
+            line-height: 1.2;
+            word-break: break-word;
         }
 
-        .gap-row {
-            height: 9mm;
+        .footer-cell {
+            vertical-align: bottom;
+            padding: 0 10mm 10mm 10mm;
         }
 
-        .details-row {
-            height: 26mm;
-        }
-
-        .details-wrap {
-            padding-left: 7mm;
-            padding-right: 7mm;
-            vertical-align: top;
-        }
-
-        .details {
+        .details-table {
             width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
 
-        .details td {
+        .details-table td {
             width: 33.333%;
+            vertical-align: top;
 
             font-size: {
                     {
-                    $detailFont
+                    $detailFontPt
                 }
             }
 
             pt;
             line-height: 1.45;
-            vertical-align: top;
+            color: #4a4a4a;
             padding: 0 8mm;
         }
 
-        .detail {
-            margin: 0 0 1.6mm 0;
+        .detail-row {
+            margin: 0 0 2mm 0;
+            white-space: nowrap;
         }
 
         .label {
             font-weight: bold;
         }
 
-        .end-row {
-            height: 7mm;
+        .value {
+            font-weight: normal;
         }
     </style>
 </head>
 
 <body>
-    <table class="manifest">
-        <tr class="headrow">
-            <td>
-                <table class="brand-table">
-                    <tr>
-                        <td class="brand-name">{{ $companyName ?: '' }}</td>
-                        <td class="brand-logo">@if($logoSrc)<img src="{{ $logoSrc }}" width="150" alt="">@endif</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        <tr class="name-row">
-            <td class="name-area">
-                <div class="person-name">{{ $customerName }}</div>
-            </td>
-        </tr>
-        <tr class="gap-row">
-            <td></td>
-        </tr>
-        <tr class="details-row">
-            <td class="details-wrap">
-                <table class="details">
-                    <tr>
-                        <td>
-                            <div class="detail"><span class="label">Pickup Time:</span> &nbsp;{{ $pickupTime }}</div>
-                            <div class="detail"><span class="label">Car No.:</span> &nbsp;{{ $carNo }}</div>
-                            <div class="detail"><span class="label">Vehicle:</span> &nbsp;{{ $vehicle }}</div>
-                        </td>
-                        <td>
-                            <div class="detail"><span class="label">From / To:</span> &nbsp;{{ $from }} - {{ $to }}</div>
-                            <div class="detail"><span class="label">Driver:</span> &nbsp;{{ $driver }}</div>
-                            <div class="detail"><span class="label">Flight:</span> &nbsp;{{ $flight }}</div>
-                        </td>
-                        <td>
-                            <div class="detail"><span class="label">Date:</span> &nbsp;{{ $date }}</div>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        <tr class="end-row">
-            <td></td>
-        </tr>
-    </table>
+    <div class="page">
+        <table class="outer">
+            <tr class="header-row">
+                <td class="header-cell">
+                    <table class="header-table">
+                        <tr>
+                            <td class="company-name">
+                                {{ $companyName ?: '' }}
+                            </td>
+                            <td class="company-logo">
+                                @if (!empty($logoSrc))
+                                <img src="{{ $logoSrc }}" alt="Company Logo">
+                                @endif
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr class="middle-row">
+                <td class="middle-cell">
+                    <div class="customer-name">
+                        {{ $customerName }}
+                    </div>
+                </td>
+            </tr>
+
+            <tr class="footer-row">
+                <td class="footer-cell">
+                    <table class="details-table">
+                        <tr>
+                            <td>
+                                <p class="detail-row">
+                                    <span class="label">Pickup Time:</span>
+                                    <span class="value"> {{ $pickupTime }}</span>
+                                </p>
+                                <p class="detail-row">
+                                    <span class="label">Car No.:</span>
+                                    <span class="value"> {{ $carNo }}</span>
+                                </p>
+                                <p class="detail-row">
+                                    <span class="label">Vehicle:</span>
+                                    <span class="value"> {{ $vehicle }}</span>
+                                </p>
+                            </td>
+
+                            <td>
+                                <p class="detail-row">
+                                    <span class="label">From / To:</span>
+                                    <span class="value"> {{ $from }} - {{ $to }}</span>
+                                </p>
+                                <p class="detail-row">
+                                    <span class="label">Driver:</span>
+                                    <span class="value"> {{ $driver }}</span>
+                                </p>
+                                <p class="detail-row">
+                                    <span class="label">Flight:</span>
+                                    <span class="value"> {{ $flight }}</span>
+                                </p>
+                            </td>
+
+                            <td>
+                                <p class="detail-row">
+                                    <span class="label">Date:</span>
+                                    <span class="value"> {{ $fmtDate($date) }}</span>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
 </body>
 
 </html>
