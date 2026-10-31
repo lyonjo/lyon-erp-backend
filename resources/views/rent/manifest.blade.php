@@ -1,6 +1,6 @@
 @php
 $part = $part ?? 'name';
-$detailFont = max(8, min(40, (int) ($detailFont ?? 13)));
+$detailFont = max(8, min(80, (int) ($detailFont ?? 13)));
 $nameFont = max(8, min(80, (int) ($nameFont ?? 13)));
 $companyName = $companyName ?? null;
 $logoSrc = $logoSrc ?? null;
@@ -39,7 +39,7 @@ $logoSrc = $logoSrc ?? null;
             <div><strong>Driver:</strong> {{ $driver ?? '-' }}</div>
             <div><strong>Flight:</strong> {{ $flight ?? '-' }}</div>
         </td>
-        <td style="width:33.333%;vertical-align:top;padding:0 0 0 3mm;">
+        <td style="width:33.333%;vertical-align:top;padding:0 0 0 13mm;">
             <div><strong>Date:</strong> {{ $date ?? '-' }}</div>
         </td>
     </tr>

@@ -25,7 +25,7 @@ class ManifestController extends Controller
             'driver' => ['nullable', 'string', 'max:255'],
             'vehicle' => ['nullable', 'string', 'max:255'],
             'vehicle_no' => ['nullable', 'string', 'max:100'],
-            'font' => ['nullable', 'integer', 'between:8,40'],
+            'font' => ['nullable', 'integer', 'between:8,80'],
             'name_font' => ['nullable', 'integer', 'between:14,80'],
             'format' => ['nullable', 'in:pdf,json'],
         ]);
