@@ -26,12 +26,57 @@ class RentDashboardController extends Controller
         $lastAlertDay = $today->addDays(30)->toDateString();
         $todayString = $today->toDateString();
 
-        // Exclude sold vehicles consistently with the Available Cars module.
-        $fleet = Vehicle::query()->whereNotIn('vehicles.id', DB::table('sold_cars')->select('vehicle_id'));
+        // Match the Available Cars page: the vehicle must be active, have an
+        // effective customer/base rental-price period, not be sold, and not
+        // overlap a blocking reservation at the current instant.
+        $now = CarbonImmutable::now(config('app.timezone', 'Asia/Amman'));
+        $instant = $now->format('Y-m-d H:i:s');
+        $todayPricing = $now->toDateString();
 
-        $counts = (clone $fleet)->select('branch_id')->selectRaw('COUNT(*) AS total')
-            ->groupBy('branch_id')->pluck('total', 'branch_id');
+        $availableFleet = Vehicle::query()
+            ->where('vehicles.status', 1)
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')->from('sold_cars as sc')
+                    ->whereColumn('sc.vehicle_id', 'vehicles.id');
+            })
+            ->whereExists(function ($query) use ($todayPricing) {
+                $query->selectRaw('1')
+                    ->from('car_rental_prices as crp')
+                    ->join('pricing_periods as pp', 'pp.car_rental_price_id', '=', 'crp.id')
+                    ->whereColumn('crp.brand_id', 'vehicles.brand_id')
+                    ->whereColumn('crp.model_id', 'vehicles.model_id')
+                    ->whereColumn('crp.model_year', 'vehicles.model_year')
+                    ->where('crp.client_type', 'customer')
+                    ->whereNull('crp.company_id')
+                    ->whereDate('pp.start_date', '<=', $todayPricing)
+                    ->whereDate('pp.end_date', '>=', $todayPricing);
+            })
+            ->whereNotExists(function ($query) use ($instant) {
+                $query->selectRaw('1')
+                    ->from('car_reservations as cr')
+                    ->join('bookings as b', 'b.id', '=', 'cr.booking_id')
+                    ->whereColumn('cr.car_id', 'vehicles.id')
+                    ->whereIn('b.status', ['pending', 'online_pending', 'approved', 'realyed'])
+                    ->where('cr.pickup_start_datetime', '<=', $instant)
+                    ->where('cr.dropoff_end_datetime', '>', $instant);
+            });
 
+        // Retrieve all branches at once. Switching tabs in Vue filters this
+        // collection in memory instead of requesting the API again.
+        $allAvailableVehicles = (clone $availableFleet)
+            ->with(['brand:id,name', 'model:id,name'])
+            ->orderBy('vehicles.number')->orderBy('vehicles.id')
+            ->get()
+            ->map(fn(Vehicle $v) => [
+                'id' => $v->id,
+                'branch_id' => $v->branch_id,
+                'number' => $v->number,
+                'name' => $v->model?->name,
+                'brand' => $v->brand?->name,
+                'model_year' => $v->model_year,
+            ])->values();
+
+        $counts = $allAvailableVehicles->groupBy('branch_id')->map->count();
         $branches = Branch::query()->orderBy('name')->get(['id', 'name'])
             ->map(fn(Branch $branch) => [
                 'id' => $branch->id,
@@ -43,18 +88,9 @@ class RentDashboardController extends Controller
             ? (int) $data['branch_id']
             : (int) ($branches->first()['id'] ?? 0);
 
-        $vehicles = $selectedBranch
-            ? (clone $fleet)->where('branch_id', $selectedBranch)
-            ->with(['brand:id,name', 'model:id,name'])
-            ->orderByDesc('id')->get()
-            ->map(fn(Vehicle $v) => [
-                'id' => $v->id,
-                'number' => $v->number,
-                'name' => $v->model?->name,
-                'brand' => $v->brand?->name,
-                'model_year' => $v->model_year,
-            ])->values()
-            : collect();
+        $vehicles = $allAvailableVehicles->filter(
+            fn(array $v) => (int) $v['branch_id'] === $selectedBranch
+        )->values();
 
         // Upcoming rental contract drop-offs, including today. Do not include closed contracts.
         $contracts = RentalContract::query()
@@ -84,6 +120,11 @@ class RentDashboardController extends Controller
                 'drop_off_date' => $c->booking?->end_date,
                 'drop_off_time' => $c->booking?->end_time,
             ]);
+
+        $fleet = Vehicle::query()->whereNotExists(function ($query) {
+            $query->selectRaw('1')->from('sold_cars as sc')
+                ->whereColumn('sc.vehicle_id', 'vehicles.id');
+        });
 
         $renewal = (clone $fleet)
             ->where(function ($q) use ($lastAlertDay) {
@@ -143,6 +184,7 @@ class RentDashboardController extends Controller
             'branches' => $branches,
             'selected_branch_id' => $selectedBranch ?: null,
             'vehicles' => $vehicles,
+            'vehicles_by_branch' => $allAvailableVehicles->groupBy('branch_id')->map(fn($items) => $items->values()),
             'contracts' => $contracts,
             'renewal' => ['licenses' => $licenses, 'insurances' => $insurances],
             'oil_maintenance' => $oil,
