@@ -63,7 +63,9 @@ class ManifestController extends Controller
 
         $len = mb_strlen($name);
         $autoNameFont = $len > 28 ? 20 : ($len > 20 ? 28 : ($len > 14 ? 32 : 44));
-        $values['nameFont'] = (int) ($data['name_font'] ?? $autoNameFont);
+        // The Manifest page exposes `font`; use that size for the customer name.
+        // An explicit `name_font` takes precedence when sent by another client.
+        $values['nameFont'] = (int) ($data['name_font'] ?? $data['font'] ?? $autoNameFont);
         $values['detailFont'] = (int) ($data['font'] ?? 13);
         $values['namePaddingTop'] = $len > 28 ? 42 : ($len > 20 ? 38 : ($len > 14 ? 35 : 30));
 
@@ -94,7 +96,19 @@ class ManifestController extends Controller
                 'tempDir' => $cache,
             ]);
             $pdf->SetAutoPageBreak(false);
-            $pdf->WriteHTML(view('rent.manifest', $values)->render());
+            // A4 landscape: 297 x 210 mm. Use mPDF's native fixed-position
+            // renderer instead of HTML tables stretched to page height.
+            // The footer stays anchored at y=176 mm regardless of name size.
+            foreach (
+                [
+                    ['header', 10, 9, 277, 34],
+                    ['name',   17, 89, 263, 32],
+                    ['footer',  8, 176, 281, 25],
+                ] as [$part, $x, $y, $width, $height]
+            ) {
+                $html = view('rent.manifest', [...$values, 'part' => $part])->render();
+                $pdf->WriteFixedPosHTML($html, $x, $y, $width, $height, 'shrink');
+            }
             return response($pdf->Output('', 'S'), 200)
                 ->header('Content-Type', 'application/pdf')
                 ->header('Content-Disposition', 'inline; filename="manifest.pdf"')
