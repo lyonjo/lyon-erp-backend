@@ -50,6 +50,8 @@ use App\Http\Middleware\RequireCustomerFrontDocuments;
 use App\Http\Controllers\Rent\CustomerCompanyAttachmentController;
 use App\Http\Controllers\Rent\BranchDestinationController;
 use App\Http\Controllers\Rent\ManifestController;
+use App\Http\Controllers\Rent\RentDashboardController;
+
 
 
 Route::middleware(['api', InitializeTenancyByHeader::class])
@@ -262,6 +264,7 @@ Route::middleware(['api', InitializeTenancyByHeader::class])
                 Route::put('/branches/{branch}/destinations/{destination}', [BranchDestinationController::class, 'update']);
                 Route::delete('/branches/{branch}/destinations/{destination}', [BranchDestinationController::class, 'destroy']);
                 Route::post('/manifest', [ManifestController::class, 'generate']);
+                Route::get('/dashboard', [RentDashboardController::class, 'index']);
             });
         });
     });
